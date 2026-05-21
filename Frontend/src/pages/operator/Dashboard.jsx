@@ -58,6 +58,8 @@ export default function Dashboard() {
             { to: '/dashboard/mantenimiento', icon: '🔧', label: 'Mantenimiento',      desc: 'Órdenes y alertas' },
             { to: '/dashboard/incidencias',   icon: '⚠️',  label: 'Incidencias',        desc: 'Ver y resolver incidencias' },
             { to: '/dashboard/horarios', icon: '🕐', label: 'Horarios', desc: 'Gestionar horarios de rutas' },
+            { to: '/dashboard/estudiantes', icon: '🎓', label: 'Estudiantes', desc: 'Validar credenciales' },
+            { to: '/dashboard/usuarios', icon: '👥', label: 'Usuarios', desc: 'Gestionar usuarios y roles' },
           ].map(item => (
             <Link key={item.to} to={item.to}
               className="bg-white rounded-2xl shadow p-6 hover:shadow-md transition flex items-start gap-4">

@@ -14,6 +14,8 @@ import Incidencias  from './pages/operator/Incidencias'
 import NotFound     from './pages/public/NotFound'
 import Boletos from './pages/public/Boletos'
 import Horarios from './pages/operator/Horarios'
+import Estudiantes from './pages/operator/Estudiantes'
+import Usuarios from './pages/operator/Usuarios'
 
 export default function App() {
   const { usuario } = useAuth()
@@ -70,6 +72,18 @@ export default function App() {
           <Horarios />
         </ProtectedRoute>
       } />
+
+        <Route path="/dashboard/estudiantes" element={
+         <ProtectedRoute roles={['admin','operador']}>
+        <Estudiantes />
+      </ProtectedRoute>
+      } />
+
+        <Route path="/dashboard/usuarios" element={
+        <ProtectedRoute roles={['admin']}>
+          <Usuarios />
+        </ProtectedRoute>
+        } />
 
       {/* Ruta para 404 */}
       <Route path="*" element={<NotFound />} />

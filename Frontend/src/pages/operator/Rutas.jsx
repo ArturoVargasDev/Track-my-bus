@@ -16,7 +16,6 @@ L.Icon.Default.mergeOptions({
 
 const COLIMA = [19.2433, -103.7241]
 
-// Componente que captura clics en el mapa para agregar puntos
 function MapClickHandler({ onMapClick }) {
   useMapEvents({
     click(e) {
@@ -26,21 +25,6 @@ function MapClickHandler({ onMapClick }) {
   return null
 }
 
-// Marcadores de los puntos dibujados
-function PuntosPolyline({ puntos, onEliminar }) {
-  return puntos.map((p, i) => {
-    const marker = L.circleMarker([p.lat, p.lng], {
-      radius: 6,
-      fillColor: i === 0 ? '#16a34a' : i === puntos.length - 1 ? '#dc2626' : '#2563EB',
-      color: '#fff',
-      weight: 2,
-      fillOpacity: 1,
-    })
-    return null // Los marcadores se renderizan via useEffect en el componente padre
-  })
-}
-
-// Componente interno del mapa con marcadores circulares
 function MapaEditor({ puntos, setPuntos, colorHex }) {
   const mapRef = useRef(null)
   const markersRef = useRef([])
@@ -49,15 +33,10 @@ function MapaEditor({ puntos, setPuntos, colorHex }) {
     setPuntos(prev => [...prev, { lat: latlng.lat, lng: latlng.lng }])
   }
 
-  // Renderizar marcadores circulares en el mapa
   useEffect(() => {
     if (!mapRef.current) return
-
-    // Limpiar marcadores anteriores
     markersRef.current.forEach(m => m.remove())
     markersRef.current = []
-
-    // Agregar nuevos marcadores
     puntos.forEach((p, i) => {
       const color = i === 0 ? '#16a34a' : i === puntos.length - 1 ? '#dc2626' : colorHex
       const circle = L.circleMarker([p.lat, p.lng], {
@@ -67,7 +46,6 @@ function MapaEditor({ puntos, setPuntos, colorHex }) {
         weight: 2,
         fillOpacity: 1,
       }).addTo(mapRef.current)
-
       circle.bindTooltip(`Punto ${i + 1}`, { permanent: false })
       markersRef.current.push(circle)
     })
@@ -98,14 +76,14 @@ function MapaEditor({ puntos, setPuntos, colorHex }) {
 
 export default function Rutas() {
   const [rutas,    setRutas]    = useState([])
-  const [form,     setForm]     = useState({ nombre:'', clave:'', tipo:'urbana', color_hex:'#2563EB', empresa_id:'', zona_id:'' })
+  const [form,     setForm]     = useState({ nombre:'', clave:'', tipo:'urbana', color_hex:'#2563EB', empresa_id:'', zona_id:'', precio:'' })
   const [empresas, setEmpresas] = useState([])
   const [zonas,    setZonas]    = useState([])
   const [modal,    setModal]    = useState(false)
   const [error,    setError]    = useState('')
   const [loading,  setLoading]  = useState(false)
-  const [puntos,   setPuntos]   = useState([])   // puntos del polyline dibujados
-  const [paso,     setPaso]     = useState(1)    // 1=datos, 2=mapa
+  const [puntos,   setPuntos]   = useState([])
+  const [paso,     setPaso]     = useState(1)
 
   const cargar = async () => {
     const [r, e, z] = await Promise.all([api.get('/rutas'), api.get('/empresas'), api.get('/zonas')])
@@ -119,7 +97,7 @@ export default function Rutas() {
     setPuntos([])
     setPaso(1)
     setError('')
-    setForm({ nombre:'', clave:'', tipo:'urbana', color_hex:'#2563EB', empresa_id:'', zona_id:'' })
+    setForm({ nombre:'', clave:'', tipo:'urbana', color_hex:'#2563EB', empresa_id:'', zona_id:'', precio:'' })
   }
 
   const crear = async e => {
@@ -127,10 +105,7 @@ export default function Rutas() {
     setError('')
     setLoading(true)
     try {
-      // 1. Crear la ruta
       const { data: nuevaRuta } = await api.post('/rutas', form)
-
-      // 2. Si hay puntos dibujados, guardar el polyline
       if (puntos.length > 1 && nuevaRuta.id) {
         const polylineData = puntos.map((p, i) => ({
           orden: i + 1,
@@ -139,11 +114,8 @@ export default function Rutas() {
         }))
         try {
           await api.put(`/rutas/${nuevaRuta.id}/polyline`, { puntos: polylineData })
-        } catch {
-          // Si el endpoint no existe aún, ignorar el error del polyline
-        }
+        } catch {}
       }
-
       setModal(false)
       cargar()
     } catch(err) {
@@ -182,6 +154,7 @@ export default function Rutas() {
                 <th className="px-4 py-3 text-left">Clave</th>
                 <th className="px-4 py-3 text-left">Tipo</th>
                 <th className="px-4 py-3 text-left">Empresa</th>
+                <th className="px-4 py-3 text-left">Precio</th>
                 <th className="px-4 py-3 text-left">Color</th>
                 <th className="px-4 py-3 text-left">Acciones</th>
               </tr>
@@ -195,6 +168,7 @@ export default function Rutas() {
                     <span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full text-xs">{r.tipo}</span>
                   </td>
                   <td className="px-4 py-3 text-gray-500">{r.empresa}</td>
+                  <td className="px-4 py-3 text-gray-700 font-medium">${r.precio ?? '0.00'}</td>
                   <td className="px-4 py-3">
                     <span className="inline-block w-5 h-5 rounded-full border" style={{ background: r.color_hex }} />
                   </td>
@@ -207,7 +181,7 @@ export default function Rutas() {
                 </tr>
               ))}
               {!rutas.length && (
-                <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400">No hay rutas registradas</td></tr>
+                <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">No hay rutas registradas</td></tr>
               )}
             </tbody>
           </table>
@@ -219,7 +193,6 @@ export default function Rutas() {
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
           <div className={`bg-white rounded-2xl shadow-xl w-full ${paso === 2 ? 'max-w-4xl' : 'max-w-md'} p-6 space-y-4 transition-all`}>
 
-            {/* Header con pasos */}
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-bold text-gray-800">Nueva ruta</h2>
               <div className="flex items-center gap-2 text-sm">
@@ -260,11 +233,26 @@ export default function Rutas() {
                   <option value="">Zona *</option>
                   {zonas.map(z => <option key={z.id} value={z.id}>{z.nombre}</option>)}
                 </select>
-                <div className="flex items-center gap-2">
-                  <label className="text-sm text-gray-600">Color:</label>
-                  <input type="color" value={form.color_hex}
-                    onChange={e => setForm({...form, color_hex: e.target.value})}
-                    className="w-10 h-8 rounded cursor-pointer border" />
+                <div className="flex items-center gap-3">
+                  <div className="flex-1">
+                    <label className="block text-sm text-gray-600 mb-1">Precio del boleto ($) *</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      required
+                      placeholder="ej. 12.00"
+                      value={form.precio}
+                      onChange={e => setForm({...form, precio: e.target.value})}
+                      className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-600 mb-1">Color</label>
+                    <input type="color" value={form.color_hex}
+                      onChange={e => setForm({...form, color_hex: e.target.value})}
+                      className="w-10 h-9 rounded cursor-pointer border" />
+                  </div>
                 </div>
                 <div className="flex gap-2 pt-2">
                   <button type="button" onClick={() => setModal(false)}
@@ -285,8 +273,6 @@ export default function Rutas() {
                 <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 text-sm text-blue-700">
                   🗺️ Haz clic en el mapa para agregar puntos al recorrido de la ruta. El primer punto es verde y el último rojo.
                 </div>
-
-                {/* Mapa */}
                 <div className="h-96 rounded-xl overflow-hidden border border-gray-200">
                   <MapaEditor
                     puntos={puntos}
@@ -294,8 +280,6 @@ export default function Rutas() {
                     colorHex={form.color_hex}
                   />
                 </div>
-
-                {/* Info puntos */}
                 <div className="flex items-center justify-between text-sm text-gray-500">
                   <span>{puntos.length} punto{puntos.length !== 1 ? 's' : ''} marcado{puntos.length !== 1 ? 's' : ''}</span>
                   {puntos.length > 0 && (
@@ -305,7 +289,6 @@ export default function Rutas() {
                     </button>
                   )}
                 </div>
-
                 <div className="flex gap-2 pt-1">
                   <button type="button" onClick={() => setPaso(1)}
                     className="flex-1 border border-gray-300 rounded-xl py-2 text-sm hover:bg-gray-50 transition">
@@ -320,7 +303,6 @@ export default function Rutas() {
                 </div>
               </div>
             )}
-
           </div>
         </div>
       )}

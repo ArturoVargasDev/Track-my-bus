@@ -16,7 +16,7 @@ USE track_my_bus;
 
 CREATE TABLE roles (
   id          TINYINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  nombre      VARCHAR(50) NOT NULL UNIQUE,          -- admin | operador | conductor | usuario
+  nombre      VARCHAR(50) NOT NULL UNIQUE,
   descripcion VARCHAR(255)
 );
 
@@ -30,8 +30,8 @@ CREATE TABLE usuarios (
   password_hash     VARCHAR(255) NOT NULL,
   foto_url          VARCHAR(500),
   es_estudiante     BOOLEAN NOT NULL DEFAULT FALSE,
-  credencial_url    VARCHAR(500),                   -- foto de credencial escolar
-  credencial_valida BOOLEAN NOT NULL DEFAULT FALSE, -- validada por admin
+  credencial_url    VARCHAR(500),
+  credencial_valida BOOLEAN NOT NULL DEFAULT FALSE,
   activo            BOOLEAN NOT NULL DEFAULT TRUE,
   created_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -64,7 +64,6 @@ CREATE TABLE empresas (
   created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- Relación operador-empresa (un operador puede gestionar varias empresas)
 CREATE TABLE operadores_empresas (
   usuario_id  BIGINT UNSIGNED NOT NULL,
   empresa_id  INT UNSIGNED NOT NULL,
@@ -80,7 +79,7 @@ CREATE TABLE operadores_empresas (
 
 CREATE TABLE zonas (
   id          SMALLINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  nombre      VARCHAR(100) NOT NULL,               -- ej. "Colima-Villa de Álvarez"
+  nombre      VARCHAR(100) NOT NULL,
   descripcion VARCHAR(255)
 );
 
@@ -89,28 +88,27 @@ CREATE TABLE rutas (
   empresa_id      INT UNSIGNED NOT NULL,
   zona_id         SMALLINT UNSIGNED NOT NULL,
   nombre          VARCHAR(150) NOT NULL,
-  clave           VARCHAR(30),                     -- ej. "R-01", "COLIMA-VILLA"
+  clave           VARCHAR(30),
   tipo            ENUM('urbana','suburbana','foranea') NOT NULL DEFAULT 'urbana',
-  color_hex       CHAR(7) DEFAULT '#2563EB',        -- color en mapa
-  accesible       BOOLEAN NOT NULL DEFAULT FALSE,   -- unidades con accesibilidad
+  color_hex       CHAR(7) DEFAULT '#2563EB',
+  accesible       BOOLEAN NOT NULL DEFAULT FALSE,
   activo          BOOLEAN NOT NULL DEFAULT TRUE,
+  precio          DECIMAL(8,2) NOT NULL DEFAULT 0.00,  -- precio del boleto
   created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT fk_rutas_empresa FOREIGN KEY (empresa_id) REFERENCES empresas(id),
   CONSTRAINT fk_rutas_zona    FOREIGN KEY (zona_id)    REFERENCES zonas(id)
 );
 
--- Polyline geográfica: secuencia de puntos que trazan el recorrido
 CREATE TABLE ruta_polyline (
   id          BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   ruta_id     INT UNSIGNED NOT NULL,
-  orden       SMALLINT UNSIGNED NOT NULL,          -- orden del punto en la polyline
+  orden       SMALLINT UNSIGNED NOT NULL,
   latitud     DECIMAL(10,7) NOT NULL,
   longitud    DECIMAL(10,7) NOT NULL,
   CONSTRAINT fk_polyline_ruta FOREIGN KEY (ruta_id) REFERENCES rutas(id) ON DELETE CASCADE,
   UNIQUE KEY uq_ruta_orden (ruta_id, orden)
 );
 
--- Paradas/terminales de cada ruta
 CREATE TABLE paradas (
   id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   ruta_id     INT UNSIGNED NOT NULL,
@@ -124,11 +122,10 @@ CREATE TABLE paradas (
   UNIQUE KEY uq_parada_orden (ruta_id, orden)
 );
 
--- Horarios programados por ruta y día de la semana
 CREATE TABLE horarios (
   id              INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   ruta_id         INT UNSIGNED NOT NULL,
-  dia_semana      TINYINT UNSIGNED NOT NULL,       -- 1=Lun … 7=Dom
+  dia_semana      TINYINT UNSIGNED NOT NULL,
   hora_salida     TIME NOT NULL,
   hora_llegada    TIME NOT NULL,
   es_hora_pico    BOOLEAN NOT NULL DEFAULT FALSE,
@@ -148,14 +145,13 @@ CREATE TABLE unidades (
   modelo          VARCHAR(80),
   anio            YEAR,
   capacidad       SMALLINT UNSIGNED,
-  accesible       BOOLEAN NOT NULL DEFAULT FALSE,  -- rampas, espacio silla de ruedas
+  accesible       BOOLEAN NOT NULL DEFAULT FALSE,
   foto_url        VARCHAR(500),
   activo          BOOLEAN NOT NULL DEFAULT TRUE,
   created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT fk_unidades_empresa FOREIGN KEY (empresa_id) REFERENCES empresas(id)
 );
 
--- Asignación de conductor a unidad (turno activo)
 CREATE TABLE asignaciones (
   id              BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   unidad_id       INT UNSIGNED NOT NULL,
@@ -173,19 +169,17 @@ CREATE TABLE asignaciones (
 -- 5. RASTREO GPS EN TIEMPO REAL
 -- ============================================================
 
--- Posición actual (se sobreescribe en cada ping — tabla de estado)
 CREATE TABLE posicion_actual (
   unidad_id       INT UNSIGNED PRIMARY KEY,
   latitud         DECIMAL(10,7) NOT NULL,
   longitud        DECIMAL(10,7) NOT NULL,
   velocidad_kmh   DECIMAL(5,2) DEFAULT 0,
-  rumbo           DECIMAL(5,2),                   -- grados 0-360
+  rumbo           DECIMAL(5,2),
   conductor_activo BOOLEAN NOT NULL DEFAULT FALSE,
   updated_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_posact_unidad FOREIGN KEY (unidad_id) REFERENCES unidades(id) ON DELETE CASCADE
 );
 
--- Historial de posiciones (para cálculo de ETA y analytics)
 CREATE TABLE historial_posiciones (
   id              BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   unidad_id       INT UNSIGNED NOT NULL,
@@ -196,11 +190,10 @@ CREATE TABLE historial_posiciones (
   rumbo           DECIMAL(5,2),
   registrado_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_hist_unidad_tiempo (unidad_id, registrado_at),
-  CONSTRAINT fk_hist_unidad    FOREIGN KEY (unidad_id)    REFERENCES unidades(id),
+  CONSTRAINT fk_hist_unidad     FOREIGN KEY (unidad_id)     REFERENCES unidades(id),
   CONSTRAINT fk_hist_asignacion FOREIGN KEY (asignacion_id) REFERENCES asignaciones(id)
-) ROW_FORMAT=COMPRESSED;    -- historial puede crecer mucho
+) ROW_FORMAT=COMPRESSED;
 
--- Incidencias reportadas (usuarios o conductores)
 CREATE TABLE incidencias (
   id              BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   unidad_id       INT UNSIGNED,
@@ -213,22 +206,22 @@ CREATE TABLE incidencias (
   activa          BOOLEAN NOT NULL DEFAULT TRUE,
   created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   resuelta_at     DATETIME,
-  CONSTRAINT fk_inci_unidad   FOREIGN KEY (unidad_id)    REFERENCES unidades(id),
-  CONSTRAINT fk_inci_ruta     FOREIGN KEY (ruta_id)      REFERENCES rutas(id),
+  CONSTRAINT fk_inci_unidad   FOREIGN KEY (unidad_id)     REFERENCES unidades(id),
+  CONSTRAINT fk_inci_ruta     FOREIGN KEY (ruta_id)       REFERENCES rutas(id),
   CONSTRAINT fk_inci_usuario  FOREIGN KEY (reportado_por) REFERENCES usuarios(id)
 );
 
 -- ============================================================
--- 6. ETA — ESTIMACIONES DE LLEGADA
+-- 6. ETA
 -- ============================================================
 
 CREATE TABLE eta_registros (
   id              BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   unidad_id       INT UNSIGNED NOT NULL,
   parada_id       INT UNSIGNED NOT NULL,
-  eta_minutos     DECIMAL(5,1) NOT NULL,           -- ETA calculada
-  confianza_min   DECIMAL(4,1),                    -- ventana inferior ej. 5
-  confianza_max   DECIMAL(4,1),                    -- ventana superior ej. 7
+  eta_minutos     DECIMAL(5,1) NOT NULL,
+  confianza_min   DECIMAL(4,1),
+  confianza_max   DECIMAL(4,1),
   fuente          ENUM('historico','tiempo_real','hibrido') NOT NULL DEFAULT 'hibrido',
   calculado_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_eta_unidad_parada (unidad_id, parada_id),
@@ -236,14 +229,13 @@ CREATE TABLE eta_registros (
   CONSTRAINT fk_eta_parada FOREIGN KEY (parada_id) REFERENCES paradas(id)
 );
 
--- Velocidades promedio históricas por tramo de ruta y franja horaria
 CREATE TABLE velocidades_tramo (
   id              INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   ruta_id         INT UNSIGNED NOT NULL,
-  punto_origen    SMALLINT UNSIGNED NOT NULL,      -- orden en polyline
+  punto_origen    SMALLINT UNSIGNED NOT NULL,
   punto_destino   SMALLINT UNSIGNED NOT NULL,
-  franja_hora     TINYINT UNSIGNED NOT NULL,       -- hora del día 0-23
-  dia_semana      TINYINT UNSIGNED NOT NULL,       -- 1-7
+  franja_hora     TINYINT UNSIGNED NOT NULL,
+  dia_semana      TINYINT UNSIGNED NOT NULL,
   velocidad_prom  DECIMAL(5,2) NOT NULL,
   muestras        INT UNSIGNED NOT NULL DEFAULT 1,
   updated_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -259,13 +251,13 @@ CREATE TABLE boletos (
   id              BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   usuario_id      BIGINT UNSIGNED NOT NULL,
   ruta_id         INT UNSIGNED NOT NULL,
-  qr_token        VARCHAR(255) NOT NULL UNIQUE,    -- token único para el QR
+  qr_token        VARCHAR(255) NOT NULL UNIQUE,
   precio          DECIMAL(8,2) NOT NULL,
   estado          ENUM('pagado','usado','expirado','cancelado') NOT NULL DEFAULT 'pagado',
   valido_desde    DATETIME NOT NULL,
   valido_hasta    DATETIME NOT NULL,
   usado_at        DATETIME,
-  unidad_id       INT UNSIGNED,                    -- unidad donde se validó
+  unidad_id       INT UNSIGNED,
   created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT fk_boleto_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id),
   CONSTRAINT fk_boleto_ruta    FOREIGN KEY (ruta_id)    REFERENCES rutas(id),
@@ -278,7 +270,7 @@ CREATE TABLE pagos (
   usuario_id      BIGINT UNSIGNED NOT NULL,
   monto           DECIMAL(8,2) NOT NULL,
   metodo          ENUM('tarjeta','transferencia','efectivo','otro') NOT NULL,
-  referencia      VARCHAR(200),                    -- ID de pasarela de pago
+  referencia      VARCHAR(200),
   estado          ENUM('pendiente','completado','fallido','reembolsado') NOT NULL DEFAULT 'pendiente',
   created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT fk_pago_boleto  FOREIGN KEY (boleto_id)  REFERENCES boletos(id),
@@ -291,18 +283,18 @@ CREATE TABLE pagos (
 
 CREATE TABLE tipos_mantenimiento (
   id          SMALLINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  nombre      VARCHAR(100) NOT NULL,               -- ej. "Cambio de aceite"
+  nombre      VARCHAR(100) NOT NULL,
   categoria   ENUM('preventivo','correctivo','revision') NOT NULL,
   descripcion VARCHAR(500),
-  intervalo_km INT UNSIGNED,                       -- cada cuántos km
-  intervalo_dias SMALLINT UNSIGNED                 -- o cada cuántos días
+  intervalo_km INT UNSIGNED,
+  intervalo_dias SMALLINT UNSIGNED
 );
 
 CREATE TABLE ordenes_mantenimiento (
   id              BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   unidad_id       INT UNSIGNED NOT NULL,
   tipo_id         SMALLINT UNSIGNED NOT NULL,
-  solicitado_por  BIGINT UNSIGNED NOT NULL,        -- operador o conductor
+  solicitado_por  BIGINT UNSIGNED NOT NULL,
   estado          ENUM('pendiente','en_proceso','completado','cancelado') NOT NULL DEFAULT 'pendiente',
   prioridad       ENUM('baja','media','alta','critica') NOT NULL DEFAULT 'media',
   descripcion     VARCHAR(1000),
@@ -314,12 +306,11 @@ CREATE TABLE ordenes_mantenimiento (
   notas_tecnico   VARCHAR(1000),
   created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  CONSTRAINT fk_om_unidad FOREIGN KEY (unidad_id)      REFERENCES unidades(id),
-  CONSTRAINT fk_om_tipo   FOREIGN KEY (tipo_id)        REFERENCES tipos_mantenimiento(id),
+  CONSTRAINT fk_om_unidad  FOREIGN KEY (unidad_id)      REFERENCES unidades(id),
+  CONSTRAINT fk_om_tipo    FOREIGN KEY (tipo_id)        REFERENCES tipos_mantenimiento(id),
   CONSTRAINT fk_om_usuario FOREIGN KEY (solicitado_por) REFERENCES usuarios(id)
 );
 
--- Bitácora de km por unidad (para disparar alertas de mantenimiento)
 CREATE TABLE bitacora_km (
   id          BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   unidad_id   INT UNSIGNED NOT NULL,
@@ -334,15 +325,14 @@ CREATE TABLE bitacora_km (
 -- 9. ANALYTICS OPERATIVOS
 -- ============================================================
 
--- Resumen diario por unidad/ruta (se llena por job nocturno)
 CREATE TABLE analytics_diarios (
   id                  BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   fecha               DATE NOT NULL,
   ruta_id             INT UNSIGNED NOT NULL,
   unidad_id           INT UNSIGNED NOT NULL,
   viajes_completados  SMALLINT UNSIGNED DEFAULT 0,
-  retrasos_total      SMALLINT UNSIGNED DEFAULT 0,   -- cantidad de retrasos
-  minutos_retraso     DECIMAL(8,2) DEFAULT 0,        -- minutos acumulados
+  retrasos_total      SMALLINT UNSIGNED DEFAULT 0,
+  minutos_retraso     DECIMAL(8,2) DEFAULT 0,
   velocidad_prom_kmh  DECIMAL(5,2),
   pasajeros_estimados SMALLINT UNSIGNED,
   incidencias_total   SMALLINT UNSIGNED DEFAULT 0,
@@ -351,12 +341,11 @@ CREATE TABLE analytics_diarios (
   CONSTRAINT fk_ana_unidad FOREIGN KEY (unidad_id) REFERENCES unidades(id)
 );
 
--- Demanda por parada y franja horaria
 CREATE TABLE demanda_paradas (
   id              INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   parada_id       INT UNSIGNED NOT NULL,
   dia_semana      TINYINT UNSIGNED NOT NULL,
-  franja_hora     TINYINT UNSIGNED NOT NULL,        -- hora 0-23
+  franja_hora     TINYINT UNSIGNED NOT NULL,
   abordajes_prom  DECIMAL(6,2) DEFAULT 0,
   muestras        INT UNSIGNED DEFAULT 1,
   updated_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -375,13 +364,12 @@ CREATE TABLE notificaciones (
   titulo          VARCHAR(200) NOT NULL,
   cuerpo          VARCHAR(1000),
   leida           BOOLEAN NOT NULL DEFAULT FALSE,
-  datos_extra     JSON,                            -- payload flexible (unidad_id, parada_id, etc.)
+  datos_extra     JSON,
   created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_noti_usuario (usuario_id, leida),
   CONSTRAINT fk_noti_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
 );
 
--- Suscripciones push (PWA Web Push)
 CREATE TABLE push_subscriptions (
   id              BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   usuario_id      BIGINT UNSIGNED NOT NULL,
@@ -393,12 +381,11 @@ CREATE TABLE push_subscriptions (
   CONSTRAINT fk_push_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
 );
 
--- Rutas favoritas del usuario (para alertas de ETA personalizadas)
 CREATE TABLE favoritos_rutas (
   usuario_id  BIGINT UNSIGNED NOT NULL,
   ruta_id     INT UNSIGNED NOT NULL,
-  parada_id   INT UNSIGNED,                        -- parada específica de interés
-  alerta_eta  BOOLEAN NOT NULL DEFAULT FALSE,      -- notificar cuando el bus se acerque
+  parada_id   INT UNSIGNED,
+  alerta_eta  BOOLEAN NOT NULL DEFAULT FALSE,
   created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (usuario_id, ruta_id),
   CONSTRAINT fk_fav_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
@@ -420,14 +407,14 @@ INSERT INTO zonas (nombre, descripcion) VALUES
   ('Colima–Villa de Álvarez', 'Zona conurbada principal del piloto');
 
 INSERT INTO tipos_mantenimiento (nombre, categoria, intervalo_km, intervalo_dias) VALUES
-  ('Cambio de aceite',              'preventivo',   5000,  90),
-  ('Revisión de frenos',            'preventivo',  10000, 180),
-  ('Cambio de filtro de aire',      'preventivo',  15000, 180),
-  ('Revisión de llantas',           'preventivo',   5000,  60),
-  ('Servicio general',              'preventivo',  20000, 365),
-  ('Reparación de motor',           'correctivo',   NULL, NULL),
+  ('Cambio de aceite',               'preventivo',  5000,  90),
+  ('Revisión de frenos',             'preventivo', 10000, 180),
+  ('Cambio de filtro de aire',       'preventivo', 15000, 180),
+  ('Revisión de llantas',            'preventivo',  5000,  60),
+  ('Servicio general',               'preventivo', 20000, 365),
+  ('Reparación de motor',            'correctivo',  NULL, NULL),
   ('Reparación de sistema eléctrico','correctivo',  NULL, NULL),
-  ('Revisión pre-turno',            'revision',     NULL,   1);
+  ('Revisión pre-turno',             'revision',    NULL,    1);
 
 -- ============================================================
 -- FIN DEL SCRIPT

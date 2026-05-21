@@ -41,9 +41,9 @@ export default function Navbar() {
                 Mi panel
               </Link>
             )}
-            {usuario && (
+            {usuario?.es_estudiante == 1 && (
               <Link to="/boletos" className="hover:underline">
-                Mis boletos
+              Mis boletos
               </Link>
             )}
             <span className="opacity-75">{usuario.nombre}</span>
