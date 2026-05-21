@@ -1,0 +1,435 @@
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font-sans); }
+
+#pres {
+  width: 100%;
+  aspect-ratio: 16/9;
+  min-height: 380px;
+  position: relative;
+  overflow: hidden;
+  background: #0a0f1e;
+  border-radius: var(--border-radius-lg);
+}
+
+.slide {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 36px;
+  opacity: 0;
+  transition: opacity 0.7s ease;
+  text-align: center;
+}
+.slide.active { opacity: 1; }
+
+#progress-bar {
+  position: absolute;
+  bottom: 0; left: 0;
+  height: 3px;
+  background: #378ADD;
+  width: 0%;
+  transition: width linear;
+  z-index: 10;
+}
+
+#controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+#controls button {
+  font-size: 13px;
+  padding: 6px 14px;
+  border-radius: var(--border-radius-md);
+  cursor: pointer;
+  border: 0.5px solid var(--color-border-secondary);
+  background: var(--color-background-secondary);
+  color: var(--color-text-primary);
+}
+#controls button:hover { background: var(--color-background-tertiary); }
+#slide-counter { font-size: 13px; color: var(--color-text-secondary); min-width: 52px; text-align: center; }
+
+.dot-row {
+  display: flex; gap: 6px; position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%);
+}
+.dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: rgba(255,255,255,0.25);
+  transition: background 0.3s;
+  cursor: pointer;
+}
+.dot.on { background: #378ADD; }
+
+.s-cover { background: linear-gradient(135deg, #0a0f1e 0%, #0d1f3c 100%); }
+.s-dark  { background: #0d1a2e; }
+.s-mid   { background: #091628; }
+
+.tag {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #85B7EB;
+  background: rgba(55,138,221,0.15);
+  border: 0.5px solid rgba(55,138,221,0.3);
+  border-radius: 4px;
+  padding: 4px 10px;
+  margin-bottom: 16px;
+}
+.big-title {
+  font-size: clamp(26px, 5vw, 42px);
+  font-weight: 500;
+  color: #fff;
+  line-height: 1.15;
+  margin-bottom: 12px;
+}
+.sub {
+  font-size: clamp(13px, 2vw, 16px);
+  color: rgba(255,255,255,0.55);
+  max-width: 560px;
+  line-height: 1.6;
+}
+.accent { color: #378ADD; }
+
+.g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; width: 100%; max-width: 640px; margin-top: 24px; }
+.g3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; width: 100%; max-width: 640px; margin-top: 24px; }
+.card-sm {
+  background: rgba(255,255,255,0.05);
+  border: 0.5px solid rgba(255,255,255,0.1);
+  border-radius: var(--border-radius-md);
+  padding: 16px;
+  text-align: left;
+}
+.card-sm .icon { font-size: 22px; color: #378ADD; margin-bottom: 8px; }
+.card-sm .label { font-size: 12px; color: rgba(255,255,255,0.45); margin-bottom: 4px; }
+.card-sm .val { font-size: 15px; color: #fff; font-weight: 500; }
+.card-sm .desc { font-size: 12px; color: rgba(255,255,255,0.5); margin-top: 4px; line-height: 1.45; }
+
+.pill-row { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 20px; }
+.pill {
+  font-size: 12px; font-weight: 500;
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 0.5px solid rgba(255,255,255,0.15);
+  color: rgba(255,255,255,0.8);
+  background: rgba(255,255,255,0.06);
+}
+
+.bus-icon { font-size: 52px; color: #378ADD; margin-bottom: 16px; }
+
+.flow-row {
+  display: flex; align-items: center; gap: 8px;
+  flex-wrap: wrap; justify-content: center;
+  margin-top: 20px;
+}
+.fbox {
+  background: rgba(55,138,221,0.12);
+  border: 0.5px solid rgba(55,138,221,0.3);
+  border-radius: var(--border-radius-md);
+  padding: 10px 16px;
+  font-size: 13px;
+  color: #85B7EB;
+  font-weight: 500;
+}
+.farrow { color: rgba(255,255,255,0.3); font-size: 18px; }
+
+.stat-row { display: flex; gap: 24px; justify-content: center; margin-top: 28px; }
+.stat { text-align: center; }
+.stat .num { font-size: 32px; font-weight: 500; color: #378ADD; }
+.stat .lbl { font-size: 12px; color: rgba(255,255,255,0.45); margin-top: 2px; }
+
+.db-pills { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-top: 20px; max-width: 580px; }
+.db-pill {
+  font-size: 11px; padding: 4px 10px;
+  border-radius: 4px;
+  background: rgba(55,138,221,0.1);
+  border: 0.5px solid rgba(55,138,221,0.25);
+  color: #85B7EB;
+}
+
+.roadmap-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 24px; }
+.rcard {
+  background: rgba(255,255,255,0.04);
+  border: 0.5px solid rgba(255,255,255,0.1);
+  border-radius: var(--border-radius-md);
+  padding: 14px 18px;
+  text-align: left;
+  min-width: 140px;
+}
+.rcard .phase { font-size: 10px; color: rgba(255,255,255,0.35); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 6px; }
+.rcard .rtitle { font-size: 13px; color: #fff; font-weight: 500; }
+.rcard .check { font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 4px; }
+.rcard.done { border-color: rgba(55,138,221,0.35); }
+.rcard.done .phase { color: #378ADD; }
+</style>
+
+<div id="pres">
+  <div id="progress-bar"></div>
+
+  <div class="slide s-cover active">
+    <div class="tag">Ingeniería de Sistemas · 2025</div>
+    <div class="big-title">Track<span class="accent">My</span>Bus</div>
+    <p class="sub">Plataforma de rastreo GPS en tiempo real para el transporte público de la zona conurbada Colima–Villa de Álvarez</p>
+    <div class="stat-row">
+      <div class="stat"><div class="num">GPS</div><div class="lbl">Tiempo real</div></div>
+      <div class="stat"><div class="num">ETA</div><div class="lbl">Estimación de llegada</div></div>
+      <div class="stat"><div class="num">QR</div><div class="lbl">Boletos estudiantiles</div></div>
+    </div>
+  </div>
+
+  <div class="slide s-dark">
+    <div class="tag">Problemática</div>
+    <div class="big-title" style="font-size:clamp(22px,4vw,34px);">El usuario no sabe <span class="accent">cuándo llega</span> su camión</div>
+    <p class="sub">Sin información en tiempo real, los pasajeros esperan sin certeza. Los operadores no tienen visibilidad de su flota ni métricas de puntualidad.</p>
+    <div class="g2">
+      <div class="card-sm">
+        <div class="icon"><i class="ti ti-clock-x" aria-hidden="true"></i></div>
+        <div class="label">Problema usuario</div>
+        <div class="desc">Esperas indefinidas, sin saber si el camión ya pasó o está por llegar</div>
+      </div>
+      <div class="card-sm">
+        <div class="icon"><i class="ti ti-chart-bar-off" aria-hidden="true"></i></div>
+        <div class="label">Problema operador</div>
+        <div class="desc">Sin datos de flota, puntualidad ni demanda por parada o franja horaria</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide s-mid">
+    <div class="tag">Solución</div>
+    <div class="big-title" style="font-size:clamp(20px,3.5vw,32px);">Una app para <span class="accent">pasajeros, conductores y operadores</span></div>
+    <div class="g3">
+      <div class="card-sm">
+        <div class="icon"><i class="ti ti-user" aria-hidden="true"></i></div>
+        <div class="label">Pasajero</div>
+        <div class="desc">Ve el camión en el mapa y sabe cuántos minutos faltan para su parada</div>
+      </div>
+      <div class="card-sm">
+        <div class="icon"><i class="ti ti-steering-wheel" aria-hidden="true"></i></div>
+        <div class="label">Conductor</div>
+        <div class="desc">Transmite su posición GPS y reporta incidencias en ruta</div>
+      </div>
+      <div class="card-sm">
+        <div class="icon"><i class="ti ti-building" aria-hidden="true"></i></div>
+        <div class="label">Operador</div>
+        <div class="desc">Panel de analytics, gestión de flota y alertas de mantenimiento</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide s-dark">
+    <div class="tag">Arquitectura técnica</div>
+    <div class="big-title" style="font-size:clamp(20px,3.5vw,30px);">Stack <span class="accent">full-stack</span> JavaScript</div>
+    <div class="flow-row">
+      <div class="fbox"><i class="ti ti-device-mobile" aria-hidden="true"></i> Frontend<br><span style="font-size:11px;opacity:.7">React + JS</span></div>
+      <div class="farrow">→</div>
+      <div class="fbox"><i class="ti ti-server" aria-hidden="true"></i> Backend<br><span style="font-size:11px;opacity:.7">Node.js + REST</span></div>
+      <div class="farrow">→</div>
+      <div class="fbox"><i class="ti ti-database" aria-hidden="true"></i> Base de datos<br><span style="font-size:11px;opacity:.7">MySQL 8.0</span></div>
+    </div>
+    <div class="pill-row" style="margin-top:24px;">
+      <div class="pill">GPS ping en tiempo real</div>
+      <div class="pill">WebSockets / polling</div>
+      <div class="pill">JWT sessions</div>
+      <div class="pill">Polyline geográfica</div>
+      <div class="pill">Push notifications</div>
+    </div>
+  </div>
+
+  <div class="slide s-mid">
+    <div class="tag">Base de datos</div>
+    <div class="big-title" style="font-size:clamp(20px,3.5vw,30px);"><span class="accent">10 módulos</span> relacionados en MySQL</div>
+    <div class="db-pills">
+      <div class="db-pill">Roles & usuarios</div>
+      <div class="db-pill">Sesiones</div>
+      <div class="db-pill">Empresas operadoras</div>
+      <div class="db-pill">Zonas & rutas</div>
+      <div class="db-pill">Polyline geográfica</div>
+      <div class="db-pill">Paradas & horarios</div>
+      <div class="db-pill">Unidades (flota)</div>
+      <div class="db-pill">GPS: posición actual</div>
+      <div class="db-pill">Historial de posiciones</div>
+      <div class="db-pill">Incidencias</div>
+      <div class="db-pill">ETA & velocidades tramo</div>
+      <div class="db-pill">Boletos QR</div>
+      <div class="db-pill">Pagos</div>
+      <div class="db-pill">Mantenimiento</div>
+      <div class="db-pill">Analytics diarios</div>
+      <div class="db-pill">Notificaciones push</div>
+    </div>
+  </div>
+
+  <div class="slide s-dark">
+    <div class="tag">Funcionalidad clave</div>
+    <div class="big-title" style="font-size:clamp(20px,3.5vw,32px);">Estimación de llegada <span class="accent">(ETA)</span> inteligente</div>
+    <p class="sub">Combina posición GPS en tiempo real con velocidades históricas por tramo y franja horaria para dar una ventana de confianza</p>
+    <div class="flow-row" style="margin-top:24px;">
+      <div class="fbox">Posición GPS</div>
+      <div class="farrow">+</div>
+      <div class="fbox">Histórico de velocidades</div>
+      <div class="farrow">→</div>
+      <div class="fbox" style="background:rgba(55,138,221,0.25);">ETA ± margen</div>
+    </div>
+    <div class="stat-row" style="margin-top:28px;">
+      <div class="stat"><div class="num">3</div><div class="lbl">fuentes: histórico, tiempo real, híbrido</div></div>
+      <div class="stat"><div class="num" style="font-size:24px;">±&thinsp;min</div><div class="lbl">ventana de confianza</div></div>
+    </div>
+  </div>
+
+  <div class="slide s-mid">
+    <div class="tag">Módulo estudiantil</div>
+    <div class="big-title" style="font-size:clamp(20px,3.5vw,32px);">Boleto <span class="accent">QR</span> para estudiantes</div>
+    <p class="sub">Credencial escolar validada por admin. Genera un token QR único por trayecto con precio de estudiante.</p>
+    <div class="g2" style="max-width:480px;">
+      <div class="card-sm">
+        <div class="icon"><i class="ti ti-school" aria-hidden="true"></i></div>
+        <div class="label">Validación</div>
+        <div class="desc">El admin verifica la credencial escolar antes de activar el descuento</div>
+      </div>
+      <div class="card-sm">
+        <div class="icon"><i class="ti ti-qrcode" aria-hidden="true"></i></div>
+        <div class="label">Ciclo del boleto</div>
+        <div class="desc">pagado → usado → expirado. El conductor escanea al abordar.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide s-dark">
+    <div class="tag">Panel de analytics</div>
+    <div class="big-title" style="font-size:clamp(20px,3.5vw,32px);">Datos operativos <span class="accent">en tiempo real</span></div>
+    <div class="g3" style="max-width:580px;">
+      <div class="card-sm">
+        <div class="icon"><i class="ti ti-route" aria-hidden="true"></i></div>
+        <div class="label">Por ruta</div>
+        <div class="desc">Viajes completados, retrasos acumulados y velocidad promedio diaria</div>
+      </div>
+      <div class="card-sm">
+        <div class="icon"><i class="ti ti-map-pin" aria-hidden="true"></i></div>
+        <div class="label">Por parada</div>
+        <div class="desc">Demanda promedio de abordajes por franja horaria y día de semana</div>
+      </div>
+      <div class="card-sm">
+        <div class="icon"><i class="ti ti-tool" aria-hidden="true"></i></div>
+        <div class="label">Mantenimiento</div>
+        <div class="desc">Alertas por km y días. Órdenes preventivas, correctivas y de revisión</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide s-mid">
+    <div class="tag">Estado del proyecto</div>
+    <div class="big-title" style="font-size:clamp(20px,3.5vw,30px);">Roadmap de <span class="accent">desarrollo</span></div>
+    <div class="roadmap-row">
+      <div class="rcard done">
+        <div class="phase">✓ Completado</div>
+        <div class="rtitle">Base de datos</div>
+        <div class="check">MySQL · 434 líneas · 10 módulos</div>
+      </div>
+      <div class="rcard done">
+        <div class="phase">✓ Completado</div>
+        <div class="rtitle">Backend</div>
+        <div class="check">Node.js · API REST · Auth JWT</div>
+      </div>
+      <div class="rcard done">
+        <div class="phase">✓ Completado</div>
+        <div class="rtitle">Frontend</div>
+        <div class="check">React · Mapa · GPS · QR</div>
+      </div>
+      <div class="rcard">
+        <div class="phase">→ Próximo</div>
+        <div class="rtitle">Deploy & pruebas</div>
+        <div class="check">Piloto zona Colima</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide s-cover">
+    <div class="bus-icon"><i class="ti ti-bus" aria-hidden="true"></i></div>
+    <div class="big-title">Track<span class="accent">My</span>Bus</div>
+    <p class="sub">Rastreo GPS · ETA inteligente · Boleto estudiantil QR · Analytics operativo</p>
+    <div class="pill-row">
+      <div class="pill">React</div>
+      <div class="pill">Node.js</div>
+      <div class="pill">MySQL 8</div>
+      <div class="pill">JavaScript 96.9%</div>
+      <div class="pill">Colima · México</div>
+    </div>
+  </div>
+
+  <div class="dot-row" id="dots"></div>
+</div>
+
+<div id="controls">
+  <button onclick="prev()">← Anterior</button>
+  <button id="play-btn" onclick="togglePlay()">⏸ Pausar</button>
+  <span id="slide-counter">1 / 10</span>
+  <button onclick="next()">Siguiente →</button>
+</div>
+
+<script>
+const slides = document.querySelectorAll('.slide');
+const dotsEl = document.getElementById('dots');
+const bar = document.getElementById('progress-bar');
+const counter = document.getElementById('slide-counter');
+const playBtn = document.getElementById('play-btn');
+const DURATION = 15000;
+
+let cur = 0, playing = true, timer = null;
+
+slides.forEach((_,i) => {
+  const d = document.createElement('div');
+  d.className = 'dot' + (i===0?' on':'');
+  d.onclick = () => { goTo(i); if(playing) scheduleNext(); };
+  dotsEl.appendChild(d);
+});
+
+function updateDots() {
+  document.querySelectorAll('.dot').forEach((d,i) => d.classList.toggle('on', i===cur));
+}
+
+function goTo(n) {
+  slides[cur].classList.remove('active');
+  cur = (n + slides.length) % slides.length;
+  slides[cur].classList.add('active');
+  counter.textContent = (cur+1) + ' / ' + slides.length;
+  updateDots();
+  resetBar();
+}
+
+function next() { goTo(cur+1); if(playing) scheduleNext(); }
+function prev() { goTo(cur-1); }
+
+function resetBar() {
+  bar.style.transition = 'none';
+  bar.style.width = '0%';
+  void bar.offsetWidth;
+  if(playing) {
+    bar.style.transition = 'width ' + DURATION + 'ms linear';
+    bar.style.width = '100%';
+  }
+}
+
+function scheduleNext() {
+  clearTimeout(timer);
+  timer = setTimeout(() => { goTo(cur+1); scheduleNext(); }, DURATION);
+}
+
+function togglePlay() {
+  playing = !playing;
+  playBtn.textContent = playing ? '⏸ Pausar' : '▶ Reproducir';
+  if(playing) { scheduleNext(); resetBar(); }
+  else { clearTimeout(timer); bar.style.transition='none'; bar.style.width='0%'; }
+}
+
+scheduleNext();
+resetBar();
+</script>

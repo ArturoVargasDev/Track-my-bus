@@ -27,24 +27,24 @@ export async function obtener(req, res, next) {
 }
 
 export async function crear(req, res, next) {
-  const { empresa_id, zona_id, nombre, clave, tipo, color_hex, accesible } = req.body;
+  const { empresa_id, zona_id, nombre, clave, tipo, color_hex, accesible, precio } = req.body;
   if (!empresa_id || !zona_id || !nombre)
     return res.status(400).json({ error: 'empresa_id, zona_id y nombre son requeridos' });
   try {
     const [r] = await pool.query(
-      `INSERT INTO rutas (empresa_id,zona_id,nombre,clave,tipo,color_hex,accesible)
-       VALUES (?,?,?,?,?,?,?)`,
-      [empresa_id, zona_id, nombre, clave||null, tipo||'urbana', color_hex||'#2563EB', accesible?1:0]
+      `INSERT INTO rutas (empresa_id,zona_id,nombre,clave,tipo,color_hex,accesible,precio)
+       VALUES (?,?,?,?,?,?,?,?)`,
+      [empresa_id, zona_id, nombre, clave||null, tipo||'urbana', color_hex||'#2563EB', accesible?1:0, precio||0]
     );
     res.status(201).json({ id: r.insertId, nombre });
   } catch(err) { next(err); }
 }
 
 export async function actualizar(req, res, next) {
-  const { nombre, clave, tipo, color_hex, accesible } = req.body;
+  const { nombre, clave, tipo, color_hex, accesible, precio } = req.body;
   try {
-    await pool.query('UPDATE rutas SET nombre=?,clave=?,tipo=?,color_hex=?,accesible=? WHERE id=?',
-      [nombre, clave, tipo, color_hex, accesible?1:0, req.params.id]);
+    await pool.query('UPDATE rutas SET nombre=?,clave=?,tipo=?,color_hex=?,accesible=?,precio=? WHERE id=?',
+      [nombre, clave, tipo, color_hex, accesible?1:0, precio||0, req.params.id]);
     res.json({ message: 'Ruta actualizada' });
   } catch(err) { next(err); }
 }

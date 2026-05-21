@@ -23,6 +23,8 @@ export async function registro(req, res, next) {
   } catch(err) { next(err); }
 }
 
+
+
 export async function login(req, res, next) {
   const { email, password } = req.body;
   if (!email || !password)
@@ -62,7 +64,18 @@ export async function logout(req, res, next) {
     await pool.query('DELETE FROM sesiones WHERE token = ?', [token]);
     res.json({ message: 'Sesión cerrada' });
   } catch(err) { next(err); }
+} 
+
+export async function listarEstudiantes(req, res, next) {
+  try {
+    const [rows] = await pool.query(
+  `SELECT id, nombre, apellidos, email, telefono, es_estudiante, credencial_valida
+   FROM usuarios WHERE es_estudiante = 1 ORDER BY credencial_valida, nombre`
+    );
+    res.json(rows);
+  } catch(err) { next(err); }
 }
+
 
 export async function me(req, res, next) {
   try {
@@ -96,5 +109,50 @@ export async function validarCredencial(req, res, next) {
     await pool.query('UPDATE usuarios SET credencial_valida=? WHERE id=?',
       [valida?1:0, req.params.id]);
     res.json({ message: `Credencial ${valida ? 'aprobada' : 'rechazada'}` });
+  } catch(err) { next(err); }
+}
+
+export async function listarUsuarios(req, res, next) {
+  try {
+    const [rows] = await pool.query(
+      `SELECT u.id, u.nombre, u.apellidos, u.email, u.telefono, u.activo,
+              u.es_estudiante, u.rol_id, r.nombre as rol
+       FROM usuarios u JOIN roles r ON r.id = u.rol_id
+       ORDER BY u.rol_id, u.nombre`
+    );
+    res.json(rows);
+  } catch(err) { next(err); }
+}
+
+export async function crearUsuario(req, res, next) {
+  const { nombre, apellidos, email, telefono, password, rol_id } = req.body;
+  if (!nombre || !email || !password || !rol_id)
+    return res.status(400).json({ error: 'nombre, email, password y rol_id son requeridos' });
+  try {
+    const [existe] = await pool.query('SELECT id FROM usuarios WHERE email = ?', [email]);
+    if (existe.length) return res.status(409).json({ error: 'Email ya registrado' });
+    const hash = await bcrypt.hash(password, SALT);
+    const [r] = await pool.query(
+      `INSERT INTO usuarios (rol_id, nombre, apellidos, email, telefono, password_hash)
+       VALUES (?,?,?,?,?,?)`,
+      [rol_id, nombre, apellidos||null, email, telefono||null, hash]
+    );
+    res.status(201).json({ id: r.insertId, message: 'Usuario creado' });
+  } catch(err) { next(err); }
+}
+
+export async function cambiarRol(req, res, next) {
+  const { rol_id } = req.body;
+  try {
+    await pool.query('UPDATE usuarios SET rol_id = ? WHERE id = ?', [rol_id, req.params.id]);
+    res.json({ message: 'Rol actualizado' });
+  } catch(err) { next(err); }
+}
+
+export async function toggleActivo(req, res, next) {
+  const { activo } = req.body;
+  try {
+    await pool.query('UPDATE usuarios SET activo = ? WHERE id = ?', [activo?1:0, req.params.id]);
+    res.json({ message: `Usuario ${activo ? 'activado' : 'desactivado'}` });
   } catch(err) { next(err); }
 }

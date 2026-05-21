@@ -3,7 +3,7 @@ import crypto from 'crypto';
 
 export async function comprar(req, res, next) {
   const { ruta_id, valido_desde, valido_hasta, precio } = req.body;
-  if (!ruta_id || !valido_desde || !valido_hasta || !precio)
+  if (!ruta_id || !valido_desde || !valido_hasta || precio === undefined || precio === null)
     return res.status(400).json({ error: 'ruta_id, valido_desde, valido_hasta y precio son requeridos' });
   const [u] = await pool.query('SELECT es_estudiante, credencial_valida FROM usuarios WHERE id=?', [req.user.id]);
   if (!u[0]?.es_estudiante || !u[0]?.credencial_valida)

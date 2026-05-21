@@ -10,15 +10,12 @@ import Dashboard    from './pages/operator/Dashboard'
 import Rutas        from './pages/operator/Rutas'
 import Unidades     from './pages/operator/Unidades'
 import Mantenimiento from './pages/operator/Mantenimiento'
-<<<<<<< HEAD
-import NotFound     from './pages/public/NotFound'
-import Boletos from './pages/public/Boletos'
-=======
 import Incidencias  from './pages/operator/Incidencias'
 import NotFound     from './pages/public/NotFound'
 import Boletos from './pages/public/Boletos'
 import Horarios from './pages/operator/Horarios'
->>>>>>> origin/master
+import Estudiantes from './pages/operator/Estudiantes'
+import Usuarios from './pages/operator/Usuarios'
 
 export default function App() {
   const { usuario } = useAuth()
@@ -60,29 +57,35 @@ export default function App() {
           <Mantenimiento />
         </ProtectedRoute>
       } />
-<<<<<<< HEAD
-=======
       <Route path="/dashboard/incidencias" element={
         <ProtectedRoute roles={['admin','operador']}>
           <Incidencias />
         </ProtectedRoute>
       } />
->>>>>>> origin/master
       <Route path="/boletos" element={
         <ProtectedRoute roles={['usuario', 'admin', 'operador', 'conductor']}>
           <Boletos />
         </ProtectedRoute>
       } />
-<<<<<<< HEAD
-=======
       <Route path="/dashboard/horarios" element={
         <ProtectedRoute roles={['admin','operador']}>
           <Horarios />
         </ProtectedRoute>
       } />
 
+        <Route path="/dashboard/estudiantes" element={
+         <ProtectedRoute roles={['admin','operador']}>
+        <Estudiantes />
+      </ProtectedRoute>
+      } />
+
+        <Route path="/dashboard/usuarios" element={
+        <ProtectedRoute roles={['admin']}>
+          <Usuarios />
+        </ProtectedRoute>
+        } />
+
       {/* Ruta para 404 */}
->>>>>>> origin/master
       <Route path="*" element={<NotFound />} />
     </Routes>
   )
