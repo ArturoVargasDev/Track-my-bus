@@ -18,6 +18,7 @@ import boletosRoutes        from './routes/boletos.routes.js';
 import mantenimientoRoutes  from './routes/mantenimiento.routes.js';
 import analyticsRoutes      from './routes/analytics.routes.js';
 import notificacionesRoutes from './routes/notificaciones.routes.js';
+import pagosRoutes from './routes/pagos.routes.js';
 
 const app = express();
 
@@ -41,6 +42,7 @@ app.use('/api/mantenimiento',  mantenimientoRoutes);
 app.use('/api/analytics',      analyticsRoutes);
 app.use('/api/notificaciones', notificacionesRoutes);
 app.use('/api/incidencias',    incidenciasRoutes);
+app.use('/api/pagos', pagosRoutes);
 
 app.get('/api/health', (_req, res) => res.json({ status: 'ok', ts: new Date() }));
 
