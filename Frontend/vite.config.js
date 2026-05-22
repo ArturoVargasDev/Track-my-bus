@@ -21,5 +21,10 @@ export default defineConfig({
       react: resolve('./node_modules/react'),
       'react-dom': resolve('./node_modules/react-dom'),
     }
+  },
+  test: {
+      globals: true,
+      environment: 'jsdom',
+      setupFiles: './src/setupTests.js',
   }
 })
