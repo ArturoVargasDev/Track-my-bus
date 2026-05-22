@@ -22,13 +22,9 @@ export default function Boletos() {
       ]);
       setBoletos(b.data);
       setRutas(r.data);
-<<<<<<< HEAD
-    } catch {}
-=======
     } catch (err) {
       console.error("Error al cargar boletos o rutas:", err);
     }
->>>>>>> origin/master
   };
 
   useEffect(() => {
