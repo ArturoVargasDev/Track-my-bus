@@ -3,10 +3,7 @@ import cors     from 'cors';
 import helmet   from 'helmet';
 import morgan   from 'morgan';
 
-<<<<<<< HEAD
-=======
 import incidenciasRoutes from './routes/incidencias.routes.js';
->>>>>>> origin/master
 import authRoutes           from './routes/auth.routes.js';
 import zonasRoutes          from './routes/zonas.routes.js';
 import empresasRoutes       from './routes/empresas.routes.js';
@@ -22,10 +19,6 @@ import mantenimientoRoutes  from './routes/mantenimiento.routes.js';
 import analyticsRoutes      from './routes/analytics.routes.js';
 import notificacionesRoutes from './routes/notificaciones.routes.js';
 
-<<<<<<< HEAD
-=======
-
->>>>>>> origin/master
 const app = express();
 
 app.use(helmet());
@@ -47,10 +40,7 @@ app.use('/api/boletos',        boletosRoutes);
 app.use('/api/mantenimiento',  mantenimientoRoutes);
 app.use('/api/analytics',      analyticsRoutes);
 app.use('/api/notificaciones', notificacionesRoutes);
-<<<<<<< HEAD
-=======
-app.use('/api/incidencias', incidenciasRoutes);
->>>>>>> origin/master
+app.use('/api/incidencias',    incidenciasRoutes);
 
 app.get('/api/health', (_req, res) => res.json({ status: 'ok', ts: new Date() }));
 
