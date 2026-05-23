@@ -1,9 +1,7 @@
-// src/controllers/auth.controller.js
 import { encrypt, decrypt } from '../utils/crypto.js';
 import bcrypt from 'bcrypt';
 import jwt    from 'jsonwebtoken';
 import pool   from '../config/db.js';
-import { setSessionCookie, clearSessionCookie } from '../utils/cookie.utils.js'; // ✅ nuevo
 
 const SALT = 12;
 
@@ -24,6 +22,8 @@ export async function registro(req, res, next) {
     res.status(201).json({ message: 'Usuario registrado', id: r.insertId });
   } catch(err) { next(err); }
 }
+
+
 
 export async function login(req, res, next) {
   const { email, password } = req.body;
@@ -52,42 +52,36 @@ export async function login(req, res, next) {
     await pool.query('INSERT INTO sesiones (usuario_id,token,expira_at) VALUES (?,?,?)',
       [user.id, token, expira]);
 
-    // ✅ Emitir cookie segura — el token ya NO va en el body
-    setSessionCookie(res, token);
-
     const { password_hash, ...userData } = user;
-    res.json({ usuario: userData }); // token removido del body intencionalmente
+    res.json({ token, usuario: userData });
   } catch(err) { next(err); }
 }
 
 export async function logout(req, res, next) {
-  // ✅ Leer token desde cookie en lugar del header Authorization
-  const token = req.cookies?.session_token;
+  const token = req.headers.authorization?.split(' ')[1];
   if (!token) return res.status(400).json({ error: 'Token no proporcionado' });
   try {
     await pool.query('DELETE FROM sesiones WHERE token = ?', [token]);
-    clearSessionCookie(res); // ✅ Limpiar cookie
     res.json({ message: 'Sesión cerrada' });
   } catch(err) { next(err); }
-}
-
-// ── Sin cambios desde aquí ──────────────────────────────────────────────────
+} 
 
 export async function listarEstudiantes(req, res, next) {
   try {
     const [rows] = await pool.query(
-      `SELECT id, nombre, apellidos, email, telefono, es_estudiante, credencial_valida
-       FROM usuarios WHERE es_estudiante = 1 ORDER BY credencial_valida, nombre`
+  `SELECT id, nombre, apellidos, email, telefono, es_estudiante, credencial_valida
+   FROM usuarios WHERE es_estudiante = 1 ORDER BY credencial_valida, nombre`
     );
     res.json(rows);
   } catch(err) { next(err); }
 }
 
+
 export async function me(req, res, next) {
   try {
     const [rows] = await pool.query(
       `SELECT u.id,u.nombre,u.apellidos,u.email,u.telefono,
-       u.foto_url,u.credencial_url,u.es_estudiante,u.credencial_valida,r.nombre as rol
+      u.foto_url,u.credencial_url,u.es_estudiante,u.credencial_valida,r.nombre as rol
        FROM usuarios u JOIN roles r ON r.id=u.rol_id WHERE u.id=?`,
       [req.user.id]
     );

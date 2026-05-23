@@ -1,14 +1,12 @@
-// src/middlewares/auth.middleware.js
 import jwt  from 'jsonwebtoken';
 import pool from '../config/db.js';
 
 export async function authenticate(req, res, next) {
-  // ✅ Lee el token desde la cookie HttpOnly en lugar del header Authorization
-  const token = req.cookies?.session_token;
-
-  if (!token)
+  const header = req.headers.authorization;
+  if (!header?.startsWith('Bearer '))
     return res.status(401).json({ error: 'Token no proporcionado' });
 
+  const token = header.split(' ')[1];
   try {
     jwt.verify(token, process.env.JWT_SECRET);
 
@@ -28,7 +26,7 @@ export async function authenticate(req, res, next) {
   }
 }
 
-// Sin cambios
+// authorize('admin','operador')
 export function authorize(...roles) {
   const ROLES = { admin: 1, operador: 2, conductor: 3, usuario: 4 };
   return (req, res, next) => {
