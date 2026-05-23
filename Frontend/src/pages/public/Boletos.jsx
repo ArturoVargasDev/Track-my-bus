@@ -11,11 +11,7 @@ const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
 
 const CARD_STYLE = {
   style: {
-    base: {
-      fontSize: '14px',
-      color: '#374151',
-      '::placeholder': { color: '#9CA3AF' },
-    },
+    base: { fontSize: '14px', color: '#374151', '::placeholder': { color: '#9CA3AF' } },
     invalid: { color: '#EF4444' },
   },
 };
@@ -33,6 +29,81 @@ function formatFecha(iso) {
   });
 }
 
+function formatFechaHora(iso) {
+  return new Date(iso).toLocaleString('es-MX', {
+    day: '2-digit', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  });
+}
+
+// Devuelve texto legible con el tiempo restante hasta una fecha
+function tiempoRestante(isoFecha) {
+  const diff = new Date(isoFecha) - new Date();
+  if (diff <= 0) return 'Expirado';
+  const dias  = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const horas = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  const mins  = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  if (dias > 0)  return `${dias} dia${dias > 1 ? 's' : ''}, ${horas} h`;
+  if (horas > 0) return `${horas} h, ${mins} min`;
+  return `${mins} min`;
+}
+
+// Contador regresivo que se actualiza cada minuto
+function ContadorExpiracion({ validoHasta }) {
+  const [texto, setTexto] = useState(() => tiempoRestante(validoHasta));
+
+  useEffect(() => {
+    const intervalo = setInterval(() => setTexto(tiempoRestante(validoHasta)), 60 * 1000);
+    return () => clearInterval(intervalo);
+  }, [validoHasta]);
+
+  const diff        = new Date(validoHasta) - new Date();
+  const pocasTiempo = diff > 0 && diff < 24 * 60 * 60 * 1000;
+
+  if (texto === 'Expirado') return null;
+
+  return (
+    <p className={`text-xs font-medium mt-0.5 ${pocasTiempo ? 'text-red-500' : 'text-gray-400'}`}>
+      {pocasTiempo ? 'Expira en: ' : 'Vigente: '}{texto}
+    </p>
+  );
+}
+
+// Muestra cuando y donde fue usado el boleto
+function HistorialUso({ boleto }) {
+  if (boleto.estado !== 'usado' || !boleto.usado_at) return null;
+  return (
+    <div className="mt-1 text-xs text-gray-400 space-y-0.5">
+      <p>Usado: {formatFechaHora(boleto.usado_at)}</p>
+      {boleto.unidad_numero && (
+        <p>Unidad: {boleto.unidad_numero} — {boleto.unidad_placa}</p>
+      )}
+    </div>
+  );
+}
+
+// Aviso de boleto proximo a expirar (menos de 24 horas)
+function AvisoExpiracion({ boletos }) {
+  const proximos = boletos.filter(b => {
+    if (b.estado !== 'pagado') return false;
+    const diff = new Date(b.valido_hasta) - new Date();
+    return diff > 0 && diff < 24 * 60 * 60 * 1000;
+  });
+
+  if (!proximos.length) return null;
+
+  return (
+    <div className="bg-red-50 border border-red-200 rounded-2xl p-3 text-sm text-red-700">
+      <p className="font-semibold mb-1">Boletos por expirar</p>
+      {proximos.map(b => (
+        <p key={b.id} className="text-xs">
+          {b.ruta} — expira en {tiempoRestante(b.valido_hasta)}
+        </p>
+      ))}
+    </div>
+  );
+}
+
 function FormularioPago({ ruta, onSuccess, onCancel }) {
   const stripe    = useStripe();
   const elements  = useElements();
@@ -46,22 +117,17 @@ function FormularioPago({ ruta, onSuccess, onCancel }) {
     setLoading(true);
     try {
       const { data: intentData } = await api.post('/pagos/create-payment-intent', {
-        monto:       ruta.precio,
-        ruta_nombre: ruta.nombre,
+        monto: ruta.precio, ruta_nombre: ruta.nombre,
       });
-
       const { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(
         intentData.clientSecret,
         { payment_method: { card: elements.getElement(CardElement) } }
       );
-
       if (stripeError) { setError(stripeError.message); return; }
-
       if (paymentIntent.status === 'succeeded') {
         const ahora = new Date();
         const unMes = new Date();
         unMes.setMonth(unMes.getMonth() + 1);
-
         await api.post('/boletos/comprar', {
           ruta_id:      ruta.id,
           valido_desde: ahora.toISOString(),
@@ -107,13 +173,12 @@ function FormularioPago({ ruta, onSuccess, onCancel }) {
 }
 
 function ModalQR({ boleto, onClose }) {
-  const qrRef      = useRef(null);
+  const qrRef                         = useRef(null);
   const [descargando, setDescargando] = useState(false);
   const [error,       setError]       = useState('');
 
   const qrValue = boleto.qr_data || boleto.qr_token;
 
-  // Descarga el area del QR como imagen PNG
   const descargarQR = async () => {
     if (!qrRef.current) return;
     setDescargando(true);
@@ -136,8 +201,6 @@ function ModalQR({ boleto, onClose }) {
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 space-y-4 text-center">
         <h2 className="text-lg font-bold text-gray-800">Boleto QR</h2>
         <p className="text-sm text-gray-500 font-medium">{boleto.ruta}</p>
-
-        {/* Area que se exporta como imagen */}
         <div ref={qrRef}
           className="flex flex-col items-center gap-3 p-4 bg-white rounded-xl border border-gray-100">
           <QRCodeSVG value={qrValue} size={200} />
@@ -147,9 +210,7 @@ function ModalQR({ boleto, onClose }) {
             <p className="font-mono text-gray-300 text-[10px] break-all">{boleto.qr_token}</p>
           </div>
         </div>
-
         {error && <p className="text-red-500 text-xs">{error}</p>}
-
         <div className="flex gap-2">
           <button onClick={onClose}
             className="flex-1 border border-gray-300 rounded-xl py-2 text-sm hover:bg-gray-50 transition">
@@ -169,6 +230,7 @@ function ModalCompra({ rutas, onClose, onSuccess }) {
   const [paso,        setPaso]        = useState(1);
   const [rutaSel,     setRutaSel]     = useState(null);
   const [pagoExitoso, setPagoExitoso] = useState(false);
+  const [errorCompra, setErrorCompra] = useState('');
 
   const handleExito = () => {
     setPagoExitoso(true);
@@ -198,25 +260,26 @@ function ModalCompra({ rutas, onClose, onSuccess }) {
                 </span>
               </div>
             </div>
-
             <p className="text-sm text-gray-500">
               El boleto tendra validez de <strong>1 mes</strong> a partir de hoy.
             </p>
-
+            {errorCompra && (
+              <p className="text-red-600 text-sm bg-red-50 rounded-lg px-3 py-2">{errorCompra}</p>
+            )}
             {paso === 1 && (
               <div className="space-y-3">
                 <select
                   value={rutaSel?.id || ''}
-                  onChange={e => setRutaSel(rutas.find(r => r.id === parseInt(e.target.value)) || null)}
+                  onChange={e => {
+                    setErrorCompra('');
+                    setRutaSel(rutas.find(r => r.id === parseInt(e.target.value)) || null);
+                  }}
                   className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                   <option value="">Seleccionar ruta</option>
                   {rutas.map(r => (
-                    <option key={r.id} value={r.id}>
-                      {r.nombre} — ${r.precio} MXN
-                    </option>
+                    <option key={r.id} value={r.id}>{r.nombre} — ${r.precio} MXN</option>
                   ))}
                 </select>
-
                 {rutaSel && (
                   <div className="bg-blue-50 rounded-lg px-3 py-2 text-sm text-blue-700 space-y-0.5">
                     <p className="font-medium">{rutaSel.nombre}</p>
@@ -224,7 +287,6 @@ function ModalCompra({ rutas, onClose, onSuccess }) {
                     {rutaSel.tipo && <p className="capitalize text-blue-500">{rutaSel.tipo}</p>}
                   </div>
                 )}
-
                 <div className="flex gap-2 pt-2">
                   <button onClick={onClose}
                     className="flex-1 border border-gray-300 rounded-xl py-2 text-sm hover:bg-gray-50">
@@ -237,7 +299,6 @@ function ModalCompra({ rutas, onClose, onSuccess }) {
                 </div>
               </div>
             )}
-
             {paso === 2 && rutaSel && (
               <Elements stripe={stripePromise}>
                 <FormularioPago
@@ -280,8 +341,7 @@ export default function Boletos() {
 
   useEffect(() => { cargar(); }, []);
 
-  const puedeComprar = usuario?.es_estudiante && usuario?.credencial_valida;
-
+  const puedeComprar    = usuario?.es_estudiante && usuario?.credencial_valida;
   const boletosFiltrados = filtro === 'todos'
     ? boletos
     : boletos.filter(b => b.estado === filtro);
@@ -309,6 +369,9 @@ export default function Boletos() {
           </div>
         )}
 
+        {/* Aviso de boletos proximos a expirar */}
+        <AvisoExpiracion boletos={boletos} />
+
         {boletos.length > 0 && (
           <div className="flex gap-2 flex-wrap">
             {['todos', 'pagado', 'usado', 'expirado'].map(f => (
@@ -333,13 +396,18 @@ export default function Boletos() {
           <div className="space-y-3">
             {boletosFiltrados.map(b => (
               <div key={b.id}
-                className="bg-white rounded-2xl shadow p-4 flex items-center justify-between gap-4">
+                className="bg-white rounded-2xl shadow p-4 flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-gray-800 truncate">{b.ruta}</p>
                   <p className="text-xs text-gray-400 mt-0.5">
                     {formatFecha(b.valido_desde)} — {formatFecha(b.valido_hasta)}
                   </p>
-                  <p className="text-xs text-gray-400">${b.precio} MXN</p>
+                  {b.estado === 'pagado' && (
+                    <ContadorExpiracion validoHasta={b.valido_hasta} />
+                  )}
+                  {/* Historial de uso para boletos usados */}
+                  <HistorialUso boleto={b} />
+                  <p className="text-xs text-gray-400 mt-0.5">${b.precio} MXN</p>
                 </div>
                 <div className="flex flex-col items-end gap-2 shrink-0">
                   <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${ESTADO_COLOR[b.estado]}`}>
@@ -367,10 +435,7 @@ export default function Boletos() {
       )}
 
       {boletoQR && (
-        <ModalQR
-          boleto={boletoQR}
-          onClose={() => setBoletoQR(null)}
-        />
+        <ModalQR boleto={boletoQR} onClose={() => setBoletoQR(null)} />
       )}
     </div>
   );
