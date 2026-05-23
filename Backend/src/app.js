@@ -1,9 +1,10 @@
 import express  from 'express';
 import cors     from 'cors';
-import helmet   from 'helmet';
 import morgan   from 'morgan';
 
-import incidenciasRoutes from './routes/incidencias.routes.js';
+import { helmetConfig } from './middlewares/helmet.middleware.js';
+
+import incidenciasRoutes    from './routes/incidencias.routes.js';
 import authRoutes           from './routes/auth.routes.js';
 import zonasRoutes          from './routes/zonas.routes.js';
 import empresasRoutes       from './routes/empresas.routes.js';
@@ -18,11 +19,11 @@ import boletosRoutes        from './routes/boletos.routes.js';
 import mantenimientoRoutes  from './routes/mantenimiento.routes.js';
 import analyticsRoutes      from './routes/analytics.routes.js';
 import notificacionesRoutes from './routes/notificaciones.routes.js';
-import pagosRoutes from './routes/pagos.routes.js';
+import pagosRoutes          from './routes/pagos.routes.js';
 
 const app = express();
 
-app.use(helmet());
+app.use(helmetConfig);
 app.use(cors({ origin: process.env.CLIENT_URL || '*' }));
 app.use(express.json());
 app.use(morgan('dev'));
@@ -42,7 +43,7 @@ app.use('/api/mantenimiento',  mantenimientoRoutes);
 app.use('/api/analytics',      analyticsRoutes);
 app.use('/api/notificaciones', notificacionesRoutes);
 app.use('/api/incidencias',    incidenciasRoutes);
-app.use('/api/pagos', pagosRoutes);
+app.use('/api/pagos',          pagosRoutes);
 
 app.get('/api/health', (_req, res) => res.json({ status: 'ok', ts: new Date() }));
 
