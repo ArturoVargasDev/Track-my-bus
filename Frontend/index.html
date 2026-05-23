@@ -2,11 +2,11 @@
 <html lang="en">
   <head>
     <link rel="manifest" href="/manifest.json" />
-<meta name="theme-color" content="#1d4ed8" />
-<meta name="apple-mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-status-bar-style" content="default" />
-<meta name="apple-mobile-web-app-title" content="Track My Bus" />
-<link rel="apple-touch-icon" href="/icons/icon-192.png" />
+    <meta name="theme-color" content="#1d4ed8" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Track My Bus" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -14,6 +14,32 @@
   </head>
   <body>
     <div id="root"></div>
+
+    <!--
+      Advertencia de seguridad contra ataques Self-XSS.
+      Se muestra en la consola del navegador para disuadir tecnicas de
+      ingenieria social en las que se engana al usuario para ejecutar
+      codigo malicioso manualmente en la consola.
+    -->
+    <script>
+      (function () {
+        var stop = 'font-size:2.2rem;font-weight:900;color:#DC2626;';
+        var warn = 'font-size:0.95rem;font-weight:700;color:#1E293B;background:#FEF08A;padding:3px 8px;border-radius:3px;';
+        var info = 'font-size:0.85rem;color:#475569;line-height:1.7;';
+
+        console.log('%cATENCION', stop);
+        console.log('%cEsta herramienta es exclusiva para desarrolladores.', warn);
+        console.log(
+          '%cSi alguien te indico que copiaras o pegaras codigo aqui, ' +
+          'es un ataque conocido como Self-XSS.\n\n' +
+          'Ejecutar instrucciones en esta consola puede comprometer ' +
+          'tu cuenta, tus boletos y tus datos personales.\n\n' +
+          'Track My Bus nunca te solicitara el uso de la consola del navegador.',
+          info
+        );
+      })();
+    </script>
+
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
