@@ -1,7 +1,11 @@
+// src/controllers/auth.controller.js
+// Controlador de autenticacion: registro, login, logout y gestion de usuarios.
+
 import { encrypt, decrypt } from '../utils/crypto.js';
 import bcrypt from 'bcrypt';
 import jwt    from 'jsonwebtoken';
 import pool   from '../config/db.js';
+import { setSessionCookie, clearSessionCookie } from '../utils/cookie.utils.js';
 
 const SALT = 12;
 
@@ -23,8 +27,6 @@ export async function registro(req, res, next) {
   } catch(err) { next(err); }
 }
 
-
-
 export async function login(req, res, next) {
   const { email, password } = req.body;
   if (!email || !password)
@@ -36,11 +38,11 @@ export async function login(req, res, next) {
        FROM usuarios u JOIN roles r ON r.id=u.rol_id WHERE u.email=?`,
       [email]
     );
-    if (!rows.length) return res.status(401).json({ error: 'Credenciales inválidas' });
+    if (!rows.length) return res.status(401).json({ error: 'Credenciales invalidas' });
     const user = rows[0];
     if (!user.activo) return res.status(403).json({ error: 'Cuenta desactivada' });
     if (!await bcrypt.compare(password, user.password_hash))
-      return res.status(401).json({ error: 'Credenciales inválidas' });
+      return res.status(401).json({ error: 'Credenciales invalidas' });
 
     const token = jwt.sign(
       { id: user.id, rol_id: user.rol_id },
@@ -52,36 +54,42 @@ export async function login(req, res, next) {
     await pool.query('INSERT INTO sesiones (usuario_id,token,expira_at) VALUES (?,?,?)',
       [user.id, token, expira]);
 
+    // El token se entrega unicamente via cookie HttpOnly.
+    // No se incluye en el cuerpo de la respuesta para evitar su
+    // exposicion a codigo JavaScript en el cliente.
+    setSessionCookie(res, token);
+
     const { password_hash, ...userData } = user;
-    res.json({ token, usuario: userData });
+    res.json({ usuario: userData });
   } catch(err) { next(err); }
 }
 
 export async function logout(req, res, next) {
-  const token = req.headers.authorization?.split(' ')[1];
+  // El token se obtiene desde la cookie, no desde el header Authorization.
+  const token = req.cookies?.session_token;
   if (!token) return res.status(400).json({ error: 'Token no proporcionado' });
   try {
     await pool.query('DELETE FROM sesiones WHERE token = ?', [token]);
-    res.json({ message: 'Sesión cerrada' });
+    clearSessionCookie(res);
+    res.json({ message: 'Sesion cerrada' });
   } catch(err) { next(err); }
-} 
+}
 
 export async function listarEstudiantes(req, res, next) {
   try {
     const [rows] = await pool.query(
-  `SELECT id, nombre, apellidos, email, telefono, es_estudiante, credencial_valida
-   FROM usuarios WHERE es_estudiante = 1 ORDER BY credencial_valida, nombre`
+      `SELECT id, nombre, apellidos, email, telefono, es_estudiante, credencial_valida
+       FROM usuarios WHERE es_estudiante = 1 ORDER BY credencial_valida, nombre`
     );
     res.json(rows);
   } catch(err) { next(err); }
 }
 
-
 export async function me(req, res, next) {
   try {
     const [rows] = await pool.query(
       `SELECT u.id,u.nombre,u.apellidos,u.email,u.telefono,
-      u.foto_url,u.credencial_url,u.es_estudiante,u.credencial_valida,r.nombre as rol
+       u.foto_url,u.credencial_url,u.es_estudiante,u.credencial_valida,r.nombre as rol
        FROM usuarios u JOIN roles r ON r.id=u.rol_id WHERE u.id=?`,
       [req.user.id]
     );
@@ -99,7 +107,7 @@ export async function subirCredencial(req, res, next) {
       'UPDATE usuarios SET credencial_url=?, credencial_valida=FALSE WHERE id=?',
       [encrypt(credencial_url), req.user.id]
     );
-    res.json({ message: 'Credencial enviada, pendiente de validación' });
+    res.json({ message: 'Credencial enviada, pendiente de validacion' });
   } catch(err) { next(err); }
 }
 
