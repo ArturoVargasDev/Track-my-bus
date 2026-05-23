@@ -1,4 +1,5 @@
 import pool from '../config/db.js';
+import { encrypt } from '../utils/crypto.js';
 
 export async function listar(req, res, next) {
   try {
@@ -27,14 +28,17 @@ export async function marcarTodasLeidas(req, res, next) {
 
 export async function suscribirPush(req, res, next) {
   const { endpoint, p256dh, auth } = req.body;
-  if (!endpoint || !p256dh || !auth)
+  if (!endpoint || || !auth)
     return res.status(400).json({ error: 'endpoint, p256dh y auth son requeridos' });
   try {
+    // p256dh y auth son claves criptograficas de la suscripcion Web Push.
+    // Se cifran con AES-256-GCM antes de persistir para que un acceso
+    // no autorizado a la DB no permita enviar notificaciones fraudulentas.
     await pool.query(
       `INSERT INTO push_subscriptions (usuario_id,endpoint,p256dh,auth)
        VALUES (?,?,?,?)
-       ON DUPLICATE KEY UPDATE activo=1`,
-      [req.user.id, endpoint, p256dh, auth]
+       ON DUPLICATE KEY UPDATE p256dh=VALUES(p256dh), auth=VALUES(auth), activo=1`,
+      [req.user.id, endpoint, encrypt(p256dh), encrypt(auth)]
     );
     res.status(201).json({ message: 'Suscripción registrada' });
   } catch(err) { next(err); }
