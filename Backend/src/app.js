@@ -3,7 +3,7 @@ import cors     from 'cors';
 import morgan   from 'morgan';
 import cookieParser from 'cookie-parser';
 
-import { helmetConfig }                        from './middlewares/helmet.middleware.js';
+import { helmetConfig, permissionsPolicyMiddleware } from './middlewares/helmet.middleware.js';
 import { doubleCsrfProtection, csrfTokenHandler } from './middlewares/csrf.middleware.js';
 
 import incidenciasRoutes    from './routes/incidencias.routes.js';
@@ -26,6 +26,7 @@ import pagosRoutes          from './routes/pagos.routes.js';
 const app = express();
 
 app.use(helmetConfig);
+app.use(permissionsPolicyMiddleware);
 app.use(cors({ origin: process.env.CLIENT_URL || '*', credentials: true }));
 app.use(cookieParser());
 app.use(express.json());
