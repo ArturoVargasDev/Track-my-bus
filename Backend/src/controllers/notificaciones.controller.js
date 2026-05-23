@@ -28,7 +28,7 @@ export async function marcarTodasLeidas(req, res, next) {
 
 export async function suscribirPush(req, res, next) {
   const { endpoint, p256dh, auth } = req.body;
-  if (!endpoint || || !auth)
+  if (!endpoint || !auth)
     return res.status(400).json({ error: 'endpoint, p256dh y auth son requeridos' });
   try {
     // p256dh y auth son claves criptograficas de la suscripcion Web Push.

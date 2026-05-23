@@ -9,8 +9,8 @@ let csrfToken = null
 
 async function getCsrfToken() {
   if (!csrfToken) {
-    const res = await axios.get(
-      (import.meta.env.VITE_API_URL || '/api') + '/csrf-token',
+    const res = await api.get(
+      '/csrf-token',
       { withCredentials: true }
     )
     csrfToken = res.data.csrfToken
