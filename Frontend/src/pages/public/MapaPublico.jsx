@@ -55,7 +55,7 @@ export default function MapaPublico() {
     const init = async () => {
       try {
         const { data } = await api.get('/rutas')
-        setRutas(data)
+        setRutas(Array.isArray(data) ? data : (data?.data || []))
       } catch {}
       await cargarUnidades()
       setLoading(false)
