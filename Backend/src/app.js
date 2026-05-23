@@ -1,8 +1,10 @@
 import express  from 'express';
 import cors     from 'cors';
 import morgan   from 'morgan';
+import cookieParser from 'cookie-parser';
 
-import { helmetConfig } from './middlewares/helmet.middleware.js';
+import { helmetConfig }                        from './middlewares/helmet.middleware.js';
+import { doubleCsrfProtection, csrfTokenHandler } from './middlewares/csrf.middleware.js';
 
 import incidenciasRoutes    from './routes/incidencias.routes.js';
 import authRoutes           from './routes/auth.routes.js';
@@ -24,9 +26,16 @@ import pagosRoutes          from './routes/pagos.routes.js';
 const app = express();
 
 app.use(helmetConfig);
-app.use(cors({ origin: process.env.CLIENT_URL || '*' }));
+app.use(cors({ origin: process.env.CLIENT_URL || '*', credentials: true }));
+app.use(cookieParser());
 app.use(express.json());
 app.use(morgan('dev'));
+
+// Endpoint para obtener token CSRF
+app.get('/api/csrf-token', csrfTokenHandler);
+
+// Protección CSRF en todas las rutas POST
+app.use(doubleCsrfProtection);
 
 app.use('/api/auth',           authRoutes);
 app.use('/api/zonas',          zonasRoutes);
