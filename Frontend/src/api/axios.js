@@ -1,49 +1,42 @@
+// src/api/axios.js
 import axios from 'axios'
 
+const BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || '/api',
-  withCredentials: true, // necesario para que las cookies CSRF funcionen
+  baseURL:         `${BASE}/api`,
+  withCredentials: true,
 })
 
-// Obtener el token CSRF una sola vez y guardarlo
 let csrfToken = null
 
 async function getCsrfToken() {
-  if (!csrfToken) {
-    const res = await axios.get(
-      (import.meta.env.VITE_API_URL || '/api') + '/csrf-token',
-      { withCredentials: true }
-    )
-    csrfToken = res.data.csrfToken
-  }
+  const res = await axios.get(`${BASE}/api/csrf-token`, { withCredentials: true })
+  csrfToken = res.data.csrfToken
   return csrfToken
 }
 
-// Interceptor de request: agrega JWT y CSRF token
-api.interceptors.request.use(async config => {
-  // JWT
-  const token = localStorage.getItem('token')
-  if (token) config.headers.Authorization = `Bearer ${token}`
+// Permite limpiar el token desde fuera (login, logout)
+export function clearCsrfToken() {
+  csrfToken = null
+}
 
-  // CSRF solo en métodos que lo requieren
+api.interceptors.request.use(async config => {
   if (['post', 'put', 'patch', 'delete'].includes(config.method)) {
+    // Siempre obtener un token fresco para mutaciones
     const csrf = await getCsrfToken()
     config.headers['x-csrf-token'] = csrf
   }
-
   return config
 })
 
-// Interceptor de response
 api.interceptors.response.use(
   res => res,
   err => {
     if (err.response?.status === 401) {
-      localStorage.removeItem('token')
       localStorage.removeItem('usuario')
       window.location.href = '/login'
     }
-    // Si el CSRF expiró, limpiamos el token para que se regenere
     if (err.response?.status === 403) {
       csrfToken = null
     }

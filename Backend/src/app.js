@@ -1,9 +1,11 @@
-import express  from 'express';
-import cors     from 'cors';
-import morgan   from 'morgan';
+// src/app.js
+import express      from 'express';
 import cookieParser from 'cookie-parser';
+import cors         from 'cors';
+import morgan       from 'morgan';
+import passport     from './config/passport.js';
 
-import { helmetConfig }                        from './middlewares/helmet.middleware.js';
+import { helmetConfig }                           from './middlewares/helmet.middleware.js';
 import { doubleCsrfProtection, csrfTokenHandler } from './middlewares/csrf.middleware.js';
 
 import incidenciasRoutes    from './routes/incidencias.routes.js';
@@ -26,18 +28,20 @@ import pagosRoutes          from './routes/pagos.routes.js';
 const app = express();
 
 app.use(helmetConfig);
-app.use(cors({ origin: process.env.CLIENT_URL || '*', credentials: true }));
+app.use(cors({
+  origin:      process.env.FRONTEND_URL || 'http://localhost:5173',
+  credentials: true,
+}));
 app.use(cookieParser());
 app.use(express.json());
 app.use(morgan('dev'));
 
-// Endpoint para obtener token CSRF
+// Inicializar Passport sin sesiones (usamos JWT + cookies)
+app.use(passport.initialize());
+
 app.get('/api/csrf-token', csrfTokenHandler);
-
-// Protección CSRF en todas las rutas POST
+app.use('/api/auth',       authRoutes);
 app.use(doubleCsrfProtection);
-
-app.use('/api/auth',           authRoutes);
 app.use('/api/zonas',          zonasRoutes);
 app.use('/api/empresas',       empresasRoutes);
 app.use('/api/rutas',          rutasRoutes);
