@@ -41,3 +41,11 @@ export const helmetConfig = helmet({
   // Ocultar X-Powered-By
   hidePoweredBy: true,
 });
+
+export function permissionsPolicyMiddleware(_req, res, next) {
+  res.setHeader(
+    'Permissions-Policy',
+    'camera=(), microphone=(), geolocation=(), payment=(), usb=(), fullscreen=(self)'
+  );
+  next();
+}
