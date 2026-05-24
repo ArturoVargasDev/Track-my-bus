@@ -1,5 +1,4 @@
 // src/controllers/auth.controller.js
-// Controlador de autenticacion: registro, login, logout y gestion de usuarios.
 
 import { encrypt, decrypt } from '../utils/crypto.js';
 import bcrypt from 'bcrypt';
@@ -16,7 +15,6 @@ export async function registro(req, res, next) {
   try {
     const [existe] = await pool.query('SELECT id FROM usuarios WHERE email = ?', [email]);
     if (existe.length) return res.status(409).json({ error: 'Email ya registrado' });
-
     const hash = await bcrypt.hash(password, SALT);
     const [r] = await pool.query(
       `INSERT INTO usuarios (rol_id,nombre,apellidos,email,telefono,password_hash,es_estudiante)
@@ -34,7 +32,8 @@ export async function login(req, res, next) {
   try {
     const [rows] = await pool.query(
       `SELECT u.id,u.nombre,u.apellidos,u.email,u.password_hash,
-              u.rol_id,r.nombre as rol,u.activo,u.es_estudiante,u.credencial_valida
+              u.rol_id,r.nombre as rol,u.activo,u.es_estudiante,
+              u.credencial_valida,u.foto_url
        FROM usuarios u JOIN roles r ON r.id=u.rol_id WHERE u.email=?`,
       [email]
     );
@@ -43,7 +42,6 @@ export async function login(req, res, next) {
     if (!user.activo) return res.status(403).json({ error: 'Cuenta desactivada' });
     if (!await bcrypt.compare(password, user.password_hash))
       return res.status(401).json({ error: 'Credenciales invalidas' });
-
     const token = jwt.sign(
       { id: user.id, rol_id: user.rol_id },
       process.env.JWT_SECRET,
@@ -53,19 +51,13 @@ export async function login(req, res, next) {
     expira.setDate(expira.getDate() + 7);
     await pool.query('INSERT INTO sesiones (usuario_id,token,expira_at) VALUES (?,?,?)',
       [user.id, token, expira]);
-
-    // El token se entrega unicamente via cookie HttpOnly.
-    // No se incluye en el cuerpo de la respuesta para evitar su
-    // exposicion a codigo JavaScript en el cliente.
     setSessionCookie(res, token);
-
     const { password_hash, ...userData } = user;
     res.json({ usuario: userData });
   } catch(err) { next(err); }
 }
 
 export async function logout(req, res, next) {
-  // El token se obtiene desde la cookie, no desde el header Authorization.
   const token = req.cookies?.session_token;
   if (!token) return res.status(400).json({ error: 'Token no proporcionado' });
   try {
@@ -146,6 +138,43 @@ export async function crearUsuario(req, res, next) {
       [rol_id, nombre, apellidos||null, email, telefono||null, hash]
     );
     res.status(201).json({ id: r.insertId, message: 'Usuario creado' });
+  } catch(err) { next(err); }
+}
+
+export async function actualizarUsuario(req, res, next) {
+  if (req.user.rol_id !== 1 && req.user.id !== Number(req.params.id))
+    return res.status(403).json({ error: 'No tienes permiso para editar este usuario' });
+
+  const { nombre, apellidos, email, telefono, foto_url } = req.body;
+  if (!nombre || !email)
+    return res.status(400).json({ error: 'nombre y email son requeridos' });
+  try {
+    const [existe] = await pool.query(
+      'SELECT id FROM usuarios WHERE email = ? AND id != ?', [email, req.params.id]
+    );
+    if (existe.length) return res.status(409).json({ error: 'Email ya registrado por otro usuario' });
+    await pool.query(
+      'UPDATE usuarios SET nombre=?, apellidos=?, email=?, telefono=?, foto_url=? WHERE id=?',
+      [nombre, apellidos||null, email, telefono||null, foto_url||null, req.params.id]
+    );
+    res.json({ message: 'Usuario actualizado' });
+  } catch(err) { next(err); }
+}
+
+export async function cambiarPassword(req, res, next) {
+  const { password_actual, password_nueva } = req.body;
+  if (!password_actual || !password_nueva)
+    return res.status(400).json({ error: 'password_actual y password_nueva son requeridos' });
+  if (password_nueva.length < 8)
+    return res.status(400).json({ error: 'La contrasena debe tener al menos 8 caracteres' });
+  try {
+    const [rows] = await pool.query('SELECT password_hash FROM usuarios WHERE id = ?', [req.user.id]);
+    if (!rows.length) return res.status(404).json({ error: 'Usuario no encontrado' });
+    const valida = await bcrypt.compare(password_actual, rows[0].password_hash);
+    if (!valida) return res.status(401).json({ error: 'La contrasena actual es incorrecta' });
+    const hash = await bcrypt.hash(password_nueva, SALT);
+    await pool.query('UPDATE usuarios SET password_hash = ? WHERE id = ?', [hash, req.user.id]);
+    res.json({ message: 'Contrasena actualizada correctamente' });
   } catch(err) { next(err); }
 }
 

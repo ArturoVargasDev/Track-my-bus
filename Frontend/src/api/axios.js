@@ -1,33 +1,35 @@
+// src/api/axios.js
 import axios from 'axios'
 
+const BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || '/api',
+  baseURL:         `${BASE}/api`,
   withCredentials: true,
 })
 
 let csrfToken = null
 
 async function getCsrfToken() {
-  if (!csrfToken) {
-    const res = await api.get(
-      '/csrf-token',
-      { withCredentials: true }
-    )
-    csrfToken = res.data.csrfToken
-  }
+  const res = await axios.get(`${BASE}/api/csrf-token`, { withCredentials: true })
+  csrfToken = res.data.csrfToken
   return csrfToken
 }
 
-// Interceptor de request: solo CSRF, autenticación va por cookie HttpOnly
+// Permite limpiar el token desde fuera (login, logout)
+export function clearCsrfToken() {
+  csrfToken = null
+}
+
 api.interceptors.request.use(async config => {
   if (['post', 'put', 'patch', 'delete'].includes(config.method)) {
+    // Siempre obtener un token fresco para mutaciones
     const csrf = await getCsrfToken()
     config.headers['x-csrf-token'] = csrf
   }
   return config
 })
 
-// Interceptor de response
 api.interceptors.response.use(
   res => res,
   err => {

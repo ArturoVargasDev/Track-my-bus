@@ -7,6 +7,7 @@ router.get   ('/',             authenticate,                               ctrl.
 router.get   ('/:id',          authenticate,                               ctrl.obtener);
 router.post  ('/',             authenticate, authorize('admin','operador'), ctrl.crear);
 router.put   ('/:id',          authenticate, authorize('admin','operador'), ctrl.actualizar);
+router.patch ('/:id',          authenticate, authorize('admin','operador'), ctrl.actualizar);
 router.delete('/:id',          authenticate, authorize('admin','operador'), ctrl.desactivar);
 router.get   ('/:id/polyline', authenticate,                               ctrl.obtenerPolyline);
 router.put   ('/:id/polyline', authenticate, authorize('admin','operador'), ctrl.guardarPolyline);

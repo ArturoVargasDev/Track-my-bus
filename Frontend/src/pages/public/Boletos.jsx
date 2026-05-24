@@ -36,7 +36,6 @@ function formatFechaHora(iso) {
   });
 }
 
-// Devuelve texto legible con el tiempo restante hasta una fecha
 function tiempoRestante(isoFecha) {
   const diff = new Date(isoFecha) - new Date();
   if (diff <= 0) return 'Expirado';
@@ -48,20 +47,15 @@ function tiempoRestante(isoFecha) {
   return `${mins} min`;
 }
 
-// Contador regresivo que se actualiza cada minuto
 function ContadorExpiracion({ validoHasta }) {
   const [texto, setTexto] = useState(() => tiempoRestante(validoHasta));
-
   useEffect(() => {
     const intervalo = setInterval(() => setTexto(tiempoRestante(validoHasta)), 60 * 1000);
     return () => clearInterval(intervalo);
   }, [validoHasta]);
-
   const diff        = new Date(validoHasta) - new Date();
   const pocasTiempo = diff > 0 && diff < 24 * 60 * 60 * 1000;
-
   if (texto === 'Expirado') return null;
-
   return (
     <p className={`text-xs font-medium mt-0.5 ${pocasTiempo ? 'text-red-500' : 'text-gray-400'}`}>
       {pocasTiempo ? 'Expira en: ' : 'Vigente: '}{texto}
@@ -69,36 +63,28 @@ function ContadorExpiracion({ validoHasta }) {
   );
 }
 
-// Muestra cuando y donde fue usado el boleto
 function HistorialUso({ boleto }) {
   if (boleto.estado !== 'usado' || !boleto.usado_at) return null;
   return (
     <div className="mt-1 text-xs text-gray-400 space-y-0.5">
       <p>Usado: {formatFechaHora(boleto.usado_at)}</p>
-      {boleto.unidad_numero && (
-        <p>Unidad: {boleto.unidad_numero} — {boleto.unidad_placa}</p>
-      )}
+      {boleto.unidad_numero && <p>Unidad: {boleto.unidad_numero} — {boleto.unidad_placa}</p>}
     </div>
   );
 }
 
-// Aviso de boleto proximo a expirar (menos de 24 horas)
 function AvisoExpiracion({ boletos }) {
   const proximos = boletos.filter(b => {
     if (b.estado !== 'pagado') return false;
     const diff = new Date(b.valido_hasta) - new Date();
     return diff > 0 && diff < 24 * 60 * 60 * 1000;
   });
-
   if (!proximos.length) return null;
-
   return (
     <div className="bg-red-50 border border-red-200 rounded-2xl p-3 text-sm text-red-700">
       <p className="font-semibold mb-1">Boletos por expirar</p>
       {proximos.map(b => (
-        <p key={b.id} className="text-xs">
-          {b.ruta} — expira en {tiempoRestante(b.valido_hasta)}
-        </p>
+        <p key={b.id} className="text-xs">{b.ruta} — expira en {tiempoRestante(b.valido_hasta)}</p>
       ))}
     </div>
   );
@@ -113,8 +99,7 @@ function FormularioPago({ ruta, onSuccess, onCancel }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!stripe || !elements) return;
-    setError('');
-    setLoading(true);
+    setError(''); setLoading(true);
     try {
       const { data: intentData } = await api.post('/pagos/create-payment-intent', {
         monto: ruta.precio, ruta_nombre: ruta.nombre,
@@ -138,9 +123,7 @@ function FormularioPago({ ruta, onSuccess, onCancel }) {
       }
     } catch (err) {
       setError(err.response?.data?.error || 'Error al procesar el pago');
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   };
 
   return (
@@ -160,9 +143,7 @@ function FormularioPago({ ruta, onSuccess, onCancel }) {
       {error && <p className="text-red-600 text-sm">{error}</p>}
       <div className="flex gap-2">
         <button type="button" onClick={onCancel}
-          className="flex-1 border border-gray-300 rounded-xl py-2 text-sm hover:bg-gray-50">
-          Atras
-        </button>
+          className="flex-1 border border-gray-300 rounded-xl py-2 text-sm hover:bg-gray-50">Atras</button>
         <button type="submit" disabled={!stripe || loading}
           className="flex-1 bg-blue-700 text-white rounded-xl py-2 text-sm font-semibold hover:bg-blue-800 disabled:opacity-50">
           {loading ? 'Procesando...' : `Pagar $${ruta.precio} MXN`}
@@ -174,15 +155,22 @@ function FormularioPago({ ruta, onSuccess, onCancel }) {
 
 function ModalQR({ boleto, onClose }) {
   const qrRef                         = useRef(null);
+  const [qrData,      setQrData]      = useState(null);
+  const [loadingQr,   setLoadingQr]   = useState(true);
   const [descargando, setDescargando] = useState(false);
   const [error,       setError]       = useState('');
 
-  const qrValue = boleto.qr_data || boleto.qr_token;
+  // Obtener qr_data con firma ECDSA fresca del backend
+  useEffect(() => {
+    api.get(`/boletos/${boleto.id}/qr`)
+      .then(({ data }) => setQrData(data.qr_data))
+      .catch(() => setError('No se pudo obtener el QR. Intenta de nuevo.'))
+      .finally(() => setLoadingQr(false));
+  }, [boleto.id]);
 
   const descargarQR = async () => {
     if (!qrRef.current) return;
-    setDescargando(true);
-    setError('');
+    setDescargando(true); setError('');
     try {
       const dataUrl = await toPng(qrRef.current, { cacheBust: true, pixelRatio: 2 });
       const link    = document.createElement('a');
@@ -191,9 +179,7 @@ function ModalQR({ boleto, onClose }) {
       link.click();
     } catch {
       setError('No se pudo generar la imagen. Intenta de nuevo.');
-    } finally {
-      setDescargando(false);
-    }
+    } finally { setDescargando(false); }
   };
 
   return (
@@ -201,25 +187,34 @@ function ModalQR({ boleto, onClose }) {
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 space-y-4 text-center">
         <h2 className="text-lg font-bold text-gray-800">Boleto QR</h2>
         <p className="text-sm text-gray-500 font-medium">{boleto.ruta}</p>
-        <div ref={qrRef}
-          className="flex flex-col items-center gap-3 p-4 bg-white rounded-xl border border-gray-100">
-          <QRCodeSVG value={qrValue} size={200} />
-          <div className="text-xs text-gray-500 space-y-0.5">
-            <p className="font-semibold text-gray-700">{boleto.ruta}</p>
-            <p>Valido: {formatFecha(boleto.valido_desde)} — {formatFecha(boleto.valido_hasta)}</p>
-            <p className="font-mono text-gray-300 text-[10px] break-all">{boleto.qr_token}</p>
+
+        {loadingQr ? (
+          <div className="py-8 text-gray-400 text-sm">Cargando QR...</div>
+        ) : error ? (
+          <div className="py-4 text-red-500 text-sm">{error}</div>
+        ) : (
+          <div ref={qrRef}
+            className="flex flex-col items-center gap-3 p-4 bg-white rounded-xl border border-gray-100">
+            <QRCodeSVG value={qrData} size={200} />
+            <div className="text-xs text-gray-500 space-y-0.5">
+              <p className="font-semibold text-gray-700">{boleto.ruta}</p>
+              <p>Valido: {formatFecha(boleto.valido_desde)} — {formatFecha(boleto.valido_hasta)}</p>
+              <p className="font-mono text-gray-300 text-[10px] break-all">{boleto.qr_token}</p>
+            </div>
           </div>
-        </div>
-        {error && <p className="text-red-500 text-xs">{error}</p>}
+        )}
+
         <div className="flex gap-2">
           <button onClick={onClose}
             className="flex-1 border border-gray-300 rounded-xl py-2 text-sm hover:bg-gray-50 transition">
             Cerrar
           </button>
-          <button onClick={descargarQR} disabled={descargando}
-            className="flex-1 bg-blue-700 text-white rounded-xl py-2 text-sm font-semibold hover:bg-blue-800 disabled:opacity-50 transition">
-            {descargando ? 'Generando...' : 'Descargar PNG'}
-          </button>
+          {qrData && (
+            <button onClick={descargarQR} disabled={descargando}
+              className="flex-1 bg-blue-700 text-white rounded-xl py-2 text-sm font-semibold hover:bg-blue-800 disabled:opacity-50 transition">
+              {descargando ? 'Generando...' : 'Descargar PNG'}
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -232,11 +227,7 @@ function ModalCompra({ rutas, onClose, onSuccess }) {
   const [pagoExitoso, setPagoExitoso] = useState(false);
   const [errorCompra, setErrorCompra] = useState('');
 
-  const handleExito = () => {
-    setPagoExitoso(true);
-    onSuccess();
-    setTimeout(() => onClose(), 2500);
-  };
+  const handleExito = () => { setPagoExitoso(true); onSuccess(); setTimeout(() => onClose(), 2500); };
 
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
@@ -252,33 +243,18 @@ function ModalCompra({ rutas, onClose, onSuccess }) {
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-bold text-gray-800">Comprar boleto estudiantil</h2>
               <div className="flex gap-2 text-xs">
-                <span className={`px-2 py-0.5 rounded-full font-medium ${paso === 1 ? 'bg-blue-700 text-white' : 'bg-gray-100 text-gray-400'}`}>
-                  1. Ruta
-                </span>
-                <span className={`px-2 py-0.5 rounded-full font-medium ${paso === 2 ? 'bg-blue-700 text-white' : 'bg-gray-100 text-gray-400'}`}>
-                  2. Pago
-                </span>
+                <span className={`px-2 py-0.5 rounded-full font-medium ${paso===1?'bg-blue-700 text-white':'bg-gray-100 text-gray-400'}`}>1. Ruta</span>
+                <span className={`px-2 py-0.5 rounded-full font-medium ${paso===2?'bg-blue-700 text-white':'bg-gray-100 text-gray-400'}`}>2. Pago</span>
               </div>
             </div>
-            <p className="text-sm text-gray-500">
-              El boleto tendra validez de <strong>1 mes</strong> a partir de hoy.
-            </p>
-            {errorCompra && (
-              <p className="text-red-600 text-sm bg-red-50 rounded-lg px-3 py-2">{errorCompra}</p>
-            )}
+            <p className="text-sm text-gray-500">El boleto tendra validez de <strong>1 mes</strong> a partir de hoy.</p>
+            {errorCompra && <p className="text-red-600 text-sm bg-red-50 rounded-lg px-3 py-2">{errorCompra}</p>}
             {paso === 1 && (
               <div className="space-y-3">
-                <select
-                  value={rutaSel?.id || ''}
-                  onChange={e => {
-                    setErrorCompra('');
-                    setRutaSel(rutas.find(r => r.id === parseInt(e.target.value)) || null);
-                  }}
+                <select value={rutaSel?.id || ''} onChange={e => { setErrorCompra(''); setRutaSel(rutas.find(r => r.id === parseInt(e.target.value)) || null); }}
                   className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                   <option value="">Seleccionar ruta</option>
-                  {rutas.map(r => (
-                    <option key={r.id} value={r.id}>{r.nombre} — ${r.precio} MXN</option>
-                  ))}
+                  {rutas.map(r => <option key={r.id} value={r.id}>{r.nombre} — ${r.precio} MXN</option>)}
                 </select>
                 {rutaSel && (
                   <div className="bg-blue-50 rounded-lg px-3 py-2 text-sm text-blue-700 space-y-0.5">
@@ -288,24 +264,15 @@ function ModalCompra({ rutas, onClose, onSuccess }) {
                   </div>
                 )}
                 <div className="flex gap-2 pt-2">
-                  <button onClick={onClose}
-                    className="flex-1 border border-gray-300 rounded-xl py-2 text-sm hover:bg-gray-50">
-                    Cancelar
-                  </button>
+                  <button onClick={onClose} className="flex-1 border border-gray-300 rounded-xl py-2 text-sm hover:bg-gray-50">Cancelar</button>
                   <button disabled={!rutaSel} onClick={() => setPaso(2)}
-                    className="flex-1 bg-blue-700 text-white rounded-xl py-2 text-sm font-semibold hover:bg-blue-800 disabled:opacity-50">
-                    Siguiente
-                  </button>
+                    className="flex-1 bg-blue-700 text-white rounded-xl py-2 text-sm font-semibold hover:bg-blue-800 disabled:opacity-50">Siguiente</button>
                 </div>
               </div>
             )}
             {paso === 2 && rutaSel && (
               <Elements stripe={stripePromise}>
-                <FormularioPago
-                  ruta={rutaSel}
-                  onSuccess={handleExito}
-                  onCancel={() => setPaso(1)}
-                />
+                <FormularioPago ruta={rutaSel} onSuccess={handleExito} onCancel={() => setPaso(1)} />
               </Elements>
             )}
           </>
@@ -326,31 +293,21 @@ export default function Boletos() {
 
   const cargar = async () => {
     try {
-      const [b, r] = await Promise.all([
-        api.get('/boletos/mis-boletos'),
-        api.get('/rutas'),
-      ]);
-      setBoletos(b.data);
-      setRutas(r.data);
-    } catch (err) {
-      console.error('Error al cargar datos:', err);
-    } finally {
-      setCargando(false);
-    }
+      const [b, r] = await Promise.all([api.get('/boletos/mis-boletos'), api.get('/rutas')]);
+      setBoletos(b.data); setRutas(r.data);
+    } catch (err) { console.error('Error al cargar datos:', err); }
+    finally { setCargando(false); }
   };
 
   useEffect(() => { cargar(); }, []);
 
-  const puedeComprar    = usuario?.es_estudiante && usuario?.credencial_valida;
-  const boletosFiltrados = filtro === 'todos'
-    ? boletos
-    : boletos.filter(b => b.estado === filtro);
+  const puedeComprar     = usuario?.es_estudiante && usuario?.credencial_valida;
+  const boletosFiltrados = filtro === 'todos' ? boletos : boletos.filter(b => b.estado === filtro);
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
       <div className="max-w-2xl mx-auto p-4 space-y-6">
-
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-bold text-blue-700">Mis boletos</h1>
           {puedeComprar && (
@@ -369,17 +326,14 @@ export default function Boletos() {
           </div>
         )}
 
-        {/* Aviso de boletos proximos a expirar */}
         <AvisoExpiracion boletos={boletos} />
 
         {boletos.length > 0 && (
           <div className="flex gap-2 flex-wrap">
-            {['todos', 'pagado', 'usado', 'expirado'].map(f => (
+            {['todos','pagado','usado','expirado'].map(f => (
               <button key={f} onClick={() => setFiltro(f)}
                 className={`px-3 py-1 rounded-full text-xs font-medium border transition
-                  ${filtro === f
-                    ? 'bg-blue-700 text-white border-blue-700'
-                    : 'bg-white text-gray-600 border-gray-200 hover:border-blue-400'}`}>
+                  ${filtro===f ? 'bg-blue-700 text-white border-blue-700' : 'bg-white text-gray-600 border-gray-200 hover:border-blue-400'}`}>
                 {f.charAt(0).toUpperCase() + f.slice(1)}
               </button>
             ))}
@@ -395,27 +349,18 @@ export default function Boletos() {
         ) : (
           <div className="space-y-3">
             {boletosFiltrados.map(b => (
-              <div key={b.id}
-                className="bg-white rounded-2xl shadow p-4 flex items-start justify-between gap-4">
+              <div key={b.id} className="bg-white rounded-2xl shadow p-4 flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-gray-800 truncate">{b.ruta}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">
-                    {formatFecha(b.valido_desde)} — {formatFecha(b.valido_hasta)}
-                  </p>
-                  {b.estado === 'pagado' && (
-                    <ContadorExpiracion validoHasta={b.valido_hasta} />
-                  )}
-                  {/* Historial de uso para boletos usados */}
+                  <p className="text-xs text-gray-400 mt-0.5">{formatFecha(b.valido_desde)} — {formatFecha(b.valido_hasta)}</p>
+                  {b.estado === 'pagado' && <ContadorExpiracion validoHasta={b.valido_hasta} />}
                   <HistorialUso boleto={b} />
                   <p className="text-xs text-gray-400 mt-0.5">${b.precio} MXN</p>
                 </div>
                 <div className="flex flex-col items-end gap-2 shrink-0">
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${ESTADO_COLOR[b.estado]}`}>
-                    {b.estado}
-                  </span>
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${ESTADO_COLOR[b.estado]}`}>{b.estado}</span>
                   {b.estado === 'pagado' && (
-                    <button onClick={() => setBoletoQR(b)}
-                      className="text-blue-700 text-xs font-semibold hover:underline">
+                    <button onClick={() => setBoletoQR(b)} className="text-blue-700 text-xs font-semibold hover:underline">
                       Ver QR
                     </button>
                   )}
@@ -426,17 +371,8 @@ export default function Boletos() {
         )}
       </div>
 
-      {modalCompra && (
-        <ModalCompra
-          rutas={rutas}
-          onClose={() => setModalCompra(false)}
-          onSuccess={cargar}
-        />
-      )}
-
-      {boletoQR && (
-        <ModalQR boleto={boletoQR} onClose={() => setBoletoQR(null)} />
-      )}
+      {modalCompra && <ModalCompra rutas={rutas} onClose={() => setModalCompra(false)} onSuccess={cargar} />}
+      {boletoQR && <ModalQR boleto={boletoQR} onClose={() => setBoletoQR(null)} />}
     </div>
   );
 }

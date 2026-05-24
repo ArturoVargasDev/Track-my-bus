@@ -1,5 +1,6 @@
+// src/context/AuthContext.jsx
 import { createContext, useContext, useState } from 'react'
-import api from '../api/axios'
+import api, { clearCsrfToken } from '../api/axios'
 
 const AuthContext = createContext(null)
 
@@ -11,6 +12,7 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(false)
 
   const login = async (email, password) => {
+    clearCsrfToken()
     setLoading(true)
     try {
       const { data } = await api.post('/auth/login', { email, password })
@@ -24,14 +26,28 @@ export function AuthProvider({ children }) {
     }
   }
 
+  const loginConGoogle = (userData) => {
+    clearCsrfToken()
+    localStorage.setItem('usuario', JSON.stringify(userData))
+    setUsuario(userData)
+  }
+
   const logout = async () => {
     try { await api.post('/auth/logout') } catch {}
+    clearCsrfToken()
     localStorage.removeItem('usuario')
     setUsuario(null)
   }
 
+  // Actualiza el usuario en contexto y localStorage sin hacer logout
+  const actualizarUsuario = (datos) => {
+    const nuevo = { ...usuario, ...datos }
+    localStorage.setItem('usuario', JSON.stringify(nuevo))
+    setUsuario(nuevo)
+  }
+
   return (
-    <AuthContext.Provider value={{ usuario, loading, login, logout }}>
+    <AuthContext.Provider value={{ usuario, loading, login, loginConGoogle, logout, actualizarUsuario }}>
       {children}
     </AuthContext.Provider>
   )
