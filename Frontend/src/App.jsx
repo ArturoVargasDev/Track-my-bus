@@ -18,6 +18,7 @@ import Horarios from "./pages/operator/Horarios";
 import Estudiantes from "./pages/operator/Estudiantes";
 import Usuarios from "./pages/operator/Usuarios";
 import Perfil from "./pages/public/Perfil";
+import Empresas from "./pages/operator/Empresas";
 
 export default function App() {
   const { usuario } = useAuth();
@@ -131,7 +132,14 @@ export default function App() {
           </ProtectedRoute>
         }
       />
-
+      <Route
+        path="/dashboard/empresas"
+        element={
+          <ProtectedRoute roles={["admin"]}>
+            <Empresas />
+          </ProtectedRoute>
+        }
+      />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
