@@ -7,7 +7,7 @@ import { useAuth } from "../../context/AuthContext";
 import api from "../../api/axios";
 import Navbar from "../../components/Navbar";
 
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
 
 const CARD_STYLE = {
   style: {
