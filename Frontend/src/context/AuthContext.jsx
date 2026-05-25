@@ -18,6 +18,8 @@ export function AuthProvider({ children }) {
       const { data } = await api.post('/auth/login', { email, password })
       localStorage.setItem('usuario', JSON.stringify(data.usuario))
       setUsuario(data.usuario)
+      // Esperar a que el navegador procese la cookie Set-Cookie
+      await new Promise(resolve => setTimeout(resolve, 300))
       return data.usuario
     } catch (err) {
       throw err
@@ -39,7 +41,6 @@ export function AuthProvider({ children }) {
     setUsuario(null)
   }
 
-  // Actualiza el usuario en contexto y localStorage sin hacer logout
   const actualizarUsuario = (datos) => {
     const nuevo = { ...usuario, ...datos }
     localStorage.setItem('usuario', JSON.stringify(nuevo))
