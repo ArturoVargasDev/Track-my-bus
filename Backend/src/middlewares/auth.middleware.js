@@ -1,15 +1,13 @@
 // src/middlewares/auth.middleware.js
-// Middleware de autenticacion y autorizacion basado en cookie de sesion.
-
 import jwt  from 'jsonwebtoken';
 import pool from '../config/db.js';
 
-/**
- * Verifica que la solicitud contenga una cookie de sesion valida.
- * El token se lee desde la cookie HttpOnly "session_token" en lugar
- * del header Authorization, evitando su exposicion al codigo cliente.
- */
 export async function authenticate(req, res, next) {
+  // LOG TEMPORAL DE DIAGNOSTICO
+  console.log('[AUTH] cookies:', JSON.stringify(req.cookies))
+  console.log('[AUTH] cookie header:', req.headers.cookie)
+  console.log('[AUTH] origin:', req.headers.origin)
+
   const token = req.cookies?.session_token;
 
   if (!token)
@@ -35,11 +33,6 @@ export async function authenticate(req, res, next) {
   }
 }
 
-/**
- * Restringe el acceso a los roles indicados.
- * Uso: authorize('admin', 'operador')
- * @param {...string} roles - Nombres de roles permitidos
- */
 export function authorize(...roles) {
   const ROLES = { admin: 1, operador: 2, conductor: 3, usuario: 4 };
   return (req, res, next) => {
