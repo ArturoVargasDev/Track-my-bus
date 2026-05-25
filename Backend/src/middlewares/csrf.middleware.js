@@ -1,12 +1,14 @@
 import { doubleCsrf } from 'csrf-csrf';
 
+const IS_PROD = process.env.NODE_ENV === 'production';
+
 const { generateCsrfToken, doubleCsrfProtection } = doubleCsrf({
-  getSecret: () => process.env.CSRF_SECRET || 'csrf-secret-cambiar-en-prod',
-  getSessionIdentifier: (req) => process.env.NODE_ENV === "production" ? req.ip : "dev_session",
-  cookieName: 'x-csrf-token',
+  getSecret:            () => process.env.CSRF_SECRET || 'csrf-secret-cambiar-en-prod',
+  getSessionIdentifier: (req) => IS_PROD ? req.ip : 'dev_session',
+  cookieName:    'x-csrf-token',
   cookieOptions: {
-    sameSite: 'strict',
-    secure: process.env.NODE_ENV === 'production',
+    sameSite: IS_PROD ? 'none' : 'strict',
+    secure:   IS_PROD,
     httpOnly: false,
   },
   size: 64,
